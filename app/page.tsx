@@ -18,6 +18,7 @@ import { MetricCard } from '@/client/components/MetricCard';
 import { SectorChart } from '@/client/components/SectorChart';
 import { CSOTable } from '@/client/components/CSOTable';
 import { RegisterModal } from '@/client/components/RegisterModal';
+import { DashboardSkeleton } from '@/client/components/Skeletons';
 
 export default function DashboardPage() {
   const [records, setRecords] = useState<CSORecord[]>([]);
@@ -68,9 +69,9 @@ export default function DashboardPage() {
     : 0;
 
   return (
-    <div className="space-y-8 animate-fadeIn">
+    <div className="space-y-5 animate-fadeIn">
       {/* Header Banner */}
-      <div className="relative rounded-3xl bg-gradient-to-r from-[#143C2C] via-[#1A4C38] to-[#205C44] p-6 sm:p-8 md:p-10 text-white shadow-xl overflow-hidden border border-[#2B604B]">
+      <div className="relative rounded-3xl bg-gradient-to-r from-[#143C2C] via-[#1A4C38] to-[#205C44] p-5 sm:p-6 text-white shadow-xl overflow-hidden border border-[#2B604B]">
         <div className="relative z-10 max-w-3xl space-y-3">
           <div className="inline-flex min-h-10 items-center gap-2 px-4 rounded-full bg-white/10 text-white text-sm font-semibold backdrop-blur-md">
             <Landmark size={16} />
@@ -111,7 +112,11 @@ export default function DashboardPage() {
       </div>
 
       {/* Metric Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+      {loading ? (
+        <DashboardSkeleton />
+      ) : (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
         <MetricCard
           title="CSOs in Registry"
           value={loading ? '...' : loadError ? '—' : totalCount}
@@ -177,13 +182,17 @@ export default function DashboardPage() {
 
         {/* Preview Table */}
         <CSOTable
-          records={records.slice(0, 5)}
+          records={records.slice(0, 20)}
+          enablePagination
+          defaultPageSize={5}
           onEdit={(record) => {
             setEditingRecord(record);
             setIsModalOpen(true);
           }}
         />
       </div>
+        </>
+      )}
 
       {/* Register Modal (admin only) */}
       {isAdmin && (

@@ -7,7 +7,6 @@
 
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getFirestore, Firestore } from 'firebase/firestore';
-import { getStorage, FirebaseStorage } from 'firebase/storage';
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || 'demo-api-key',
@@ -27,14 +26,12 @@ export const isFirebaseConfigured = Boolean(
 
 let app: ReturnType<typeof getApp> | null = null;
 let db: Firestore | null = null;
-let storage: FirebaseStorage | null = null;
 
 try {
   app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
   db = getFirestore(app);
-  storage = getStorage(app);
 } catch (error) {
   console.warn('Firebase initialized in fallback mode:', error);
 }
 
-export { app, db, storage };
+export { app, db };

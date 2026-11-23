@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useAuth } from '@/client/context/AuthContext';
 import type { UserRole } from '@/client/lib/auth';
 import { ShieldCheck, User, ArrowRight, Eye, EyeOff } from 'lucide-react';
+import { BrandLogo } from '@/client/components/BrandLogo';
 
 export default function LoginPage() {
   const [selectedRole, setSelectedRole] = useState<UserRole | null>('guest');
@@ -105,7 +106,8 @@ export default function LoginPage() {
         }}
       >
         {/* Header */}
-        <div className="text-center">
+        <div className="text-center flex flex-col items-center">
+          <BrandLogo size={52} className="mb-3 drop-shadow-md" />
           <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight drop-shadow">
             CSOTrack Login
           </h1>

@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/client/context/AuthContext';
 import { Sidebar } from '@/client/components/Sidebar';
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isAdmin, loading } = useAuth();
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
 
@@ -48,9 +49,16 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      <Sidebar />
-      <div className="flex min-w-0 flex-1 flex-col lg:pl-64 min-h-screen overflow-hidden">
-        <main className="w-full flex-1 p-4 sm:p-6 md:p-8 lg:p-10 min-w-0">
+      <Sidebar
+        collapsed={sidebarCollapsed}
+        onToggleCollapse={() => setSidebarCollapsed((prev) => !prev)}
+      />
+      <div
+        className={`flex min-w-0 flex-1 flex-col pt-14 lg:pt-0 min-h-screen overflow-hidden transition-[padding] duration-300 ease-in-out ${
+          sidebarCollapsed ? 'lg:pl-20' : 'lg:pl-64'
+        }`}
+      >
+        <main className="w-full flex-1 p-4 sm:p-5 lg:p-6 min-w-0">
           {children}
         </main>
       </div>

@@ -1,17 +1,18 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, Suspense } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/client/context/AuthContext';
 import {
   Download,
   Plus,
   Search,
-  Filter,
   RotateCcw,
   SlidersHorizontal,
   X,
   Archive,
   ArchiveRestore,
+  CheckCircle2,
 } from 'lucide-react';
 import { CSORecord } from '@/client/types';
 import {
@@ -22,20 +23,47 @@ import {
 } from '@/client/lib/api';
 import { CSOTable } from '@/client/components/CSOTable';
 import { RegisterModal } from '@/client/components/RegisterModal';
+import { TableSkeleton } from '@/client/components/Skeletons';
 
-export default function DirectoryPage() {
+function DirectoryPageContent() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
   const [records, setRecords] = useState<CSORecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedLgu, setSelectedLgu] = useState('');
-  const [selectedSector, setSelectedSector] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('');
+  const [statusMessage, setStatusMessage] = useState('');
+  const [searchQuery, setSearchQuery] = useState(() => searchParams.get('q') ?? '');
+  const [selectedLgu, setSelectedLgu] = useState(() => searchParams.get('lgu') ?? '');
+  const [selectedSector, setSelectedSector] = useState(() => searchParams.get('sector') ?? '');
+  const [selectedStatus, setSelectedStatus] = useState(() => searchParams.get('status') ?? '');
+  const [showArchived, setShowArchived] = useState(() => searchParams.get('archived') === '1');
+  const [currentPage, setCurrentPage] = useState(() => {
+    const parsed = Number(searchParams.get('page') ?? '1');
+    return Number.isInteger(parsed) && parsed > 0 ? parsed : 1;
+  });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<CSORecord | null>(null);
-  const [showFiltersMobile, setShowFiltersMobile] = useState(false);
-  const [showArchived, setShowArchived] = useState(false);
   const { isAdmin } = useAuth();
+
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (searchQuery) params.set('q', searchQuery);
+    if (selectedLgu) params.set('lgu', selectedLgu);
+    if (selectedSector) params.set('sector', selectedSector);
+    if (selectedStatus) params.set('status', selectedStatus);
+    if (showArchived) params.set('archived', '1');
+    if (currentPage > 1) params.set('page', String(currentPage));
+    const qs = params.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  }, [searchQuery, selectedLgu, selectedSector, selectedStatus, showArchived, currentPage, pathname, router]);
+
+  useEffect(() => {
+    if (!statusMessage) return;
+    const timer = setTimeout(() => setStatusMessage(''), 4000);
+    return () => clearTimeout(timer);
+  }, [statusMessage]);
 
   // Load data
   const loadData = async () => {
@@ -115,8 +143,11 @@ export default function DirectoryPage() {
     if (editingRecord) {
       handleRecordUpdate(newRecord);
       setEditingRecord(null);
+      setStatusMessage(`Updated "${newRecord.organizationName}".`);
     } else {
       setRecords((prev) => [newRecord, ...prev]);
+      setCurrentPage(1);
+      setStatusMessage(`Registered "${newRecord.organizationName}".`);
     }
   };
 
@@ -129,16 +160,23 @@ export default function DirectoryPage() {
   const handleArchive = async (record: CSORecord, archived: boolean) => {
     const updatedRecord = await fetchArchiveCSORecord(record.id, archived);
     handleRecordUpdate(updatedRecord);
+    setStatusMessage(
+      archived
+        ? `Archived "${record.organizationName}".`
+        : `Restored "${record.organizationName}".`
+    );
   };
 
   const handleDelete = async (record: CSORecord) => {
     await fetchDeleteCSORecord(record.id);
     setRecords((prev) => prev.filter((current) => current.id !== record.id));
+    setStatusMessage(`Permanently deleted "${record.organizationName}".`);
   };
 
   const handleAddAttachment = async (record: CSORecord, file: File) => {
     const updatedRecord = await fetchUploadCertificateAttachment(record.id, file);
     handleRecordUpdate(updatedRecord);
+    setStatusMessage(`Uploaded attachment "${file.name}" for "${record.organizationName}".`);
   };
 
   const handleResetFilters = () => {
@@ -146,6 +184,7 @@ export default function DirectoryPage() {
     setSelectedLgu('');
     setSelectedSector('');
     setSelectedStatus('');
+    setCurrentPage(1);
   };
 
   const exportToCSV = (records: CSORecord[], filename = 'SP_Accredited_CSO_Registry_2025_2028.csv') => {
@@ -205,7 +244,7 @@ export default function DirectoryPage() {
   };
 
   return (
-    <div className="space-y-6 animate-fadeIn min-w-0">
+    <div className="space-y-4 animate-fadeIn min-w-0">
       {/* Header Bar matching Figma */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -253,7 +292,7 @@ export default function DirectoryPage() {
       </div>
 
       {/* Search & Filters Toolbar Card matching Figma */}
-      <div className="bg-white rounded-2xl p-6 shadow-sm space-y-3">
+      <div className="bg-white rounded-2xl p-4 shadow-sm space-y-2.5">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
           {/* Search Input */}
           <div className="md:col-span-5 relative">
@@ -263,14 +302,22 @@ export default function DirectoryPage() {
             />
             <input
               type="text"
+              aria-label="Search CSO directory"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1);
+              }}
               placeholder="Search any registry field..."
               className="w-full min-h-10 pl-10 pr-9 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#4E8D42] focus:border-transparent transition-all placeholder:text-[#374151] placeholder:opacity-100"
             />
             {searchQuery && (
               <button
-                onClick={() => setSearchQuery('')}
+                type="button"
+                onClick={() => {
+                  setSearchQuery('');
+                  setCurrentPage(1);
+                }}
                 className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex min-h-10 min-w-10 items-center justify-center rounded-lg text-[#374151] hover:text-gray-900 hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#245b29]"
                 aria-label="Clear search"
               >
@@ -282,8 +329,12 @@ export default function DirectoryPage() {
           {/* LGU Filter Dropdown */}
           <div className="md:col-span-2">
             <select
+              aria-label="Filter by LGU"
               value={selectedLgu}
-              onChange={(e) => setSelectedLgu(e.target.value)}
+              onChange={(e) => {
+                setSelectedLgu(e.target.value);
+                setCurrentPage(1);
+              }}
               className="w-full min-h-10 px-3 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-[#374151] focus:outline-none focus:ring-2 focus:ring-[#4E8D42] focus:border-transparent transition-all"
             >
               <option value="">All LGUs</option>
@@ -298,8 +349,12 @@ export default function DirectoryPage() {
           {/* Sector Filter Dropdown */}
           <div className="md:col-span-2">
             <select
+              aria-label="Filter by sector"
               value={selectedSector}
-              onChange={(e) => setSelectedSector(e.target.value)}
+              onChange={(e) => {
+                setSelectedSector(e.target.value);
+                setCurrentPage(1);
+              }}
               className="w-full min-h-10 px-3 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-[#374151] focus:outline-none focus:ring-2 focus:ring-[#4E8D42] focus:border-transparent transition-all"
             >
               <option value="">All sectors</option>
@@ -314,8 +369,12 @@ export default function DirectoryPage() {
           {/* Status Filter Dropdown */}
           <div className="md:col-span-2">
             <select
+              aria-label="Filter by accreditation status"
               value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
+              onChange={(e) => {
+                setSelectedStatus(e.target.value);
+                setCurrentPage(1);
+              }}
               className="w-full min-h-10 px-3 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-[#374151] focus:outline-none focus:ring-2 focus:ring-[#4E8D42] focus:border-transparent transition-all"
             >
               <option value="">All statuses</option>
@@ -352,16 +411,26 @@ export default function DirectoryPage() {
       </div>
 
       {/* Results Info Bar matching Figma */}
-      <div className="flex items-center justify-between px-1">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-1">
         <div className="flex items-center gap-2">
           <p className="text-sm font-bold text-gray-800">
-            {filteredRecords.length} {filteredRecords.length === 1 ? 'organization' : 'organizations'} found
+            {loading
+              ? 'Loading organizations...'
+              : `${filteredRecords.length} ${filteredRecords.length === 1 ? 'organization' : 'organizations'} found`}
           </p>
-          {(searchQuery || selectedLgu || selectedSector || selectedStatus) && (
+          {!loading && (searchQuery || selectedLgu || selectedSector || selectedStatus) && (
             <span className="text-sm text-[#374151]">(Filtered from {records.length} total)</span>
           )}
         </div>
-
+        {statusMessage && (
+          <p
+            role="status"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 px-3 py-1.5 text-sm font-medium text-[#245b29]"
+          >
+            <CheckCircle2 size={15} />
+            <span>{statusMessage}</span>
+          </p>
+        )}
       </div>
 
       {/* CSO Table */}
@@ -370,17 +439,25 @@ export default function DirectoryPage() {
           {loadError}
         </p>
       )}
-      <CSOTable
-        records={filteredRecords}
-        onArchive={handleArchive}
-        onDelete={handleDelete}
-        onEdit={(record) => {
-          setEditingRecord(record);
-          setIsModalOpen(true);
-        }}
-        onAddAttachment={handleAddAttachment}
-        showingArchived={showArchived}
-      />
+      {loading ? (
+        <TableSkeleton rows={8} />
+      ) : (
+        <CSOTable
+          records={filteredRecords}
+          onArchive={handleArchive}
+          onDelete={handleDelete}
+          onEdit={(record) => {
+            setEditingRecord(record);
+            setIsModalOpen(true);
+          }}
+          onAddAttachment={handleAddAttachment}
+          showingArchived={showArchived}
+          enablePagination
+          defaultPageSize={8}
+          currentPage={currentPage}
+          onPageChange={setCurrentPage}
+        />
+      )}
 
       {/* Registration Modal Overlay (admin only) */}
       {isAdmin && (
@@ -395,5 +472,13 @@ export default function DirectoryPage() {
         />
       )}
     </div>
+  );
+}
+
+export default function DirectoryPage() {
+  return (
+    <Suspense fallback={<TableSkeleton rows={8} />}>
+      <DirectoryPageContent />
+    </Suspense>
   );
 }

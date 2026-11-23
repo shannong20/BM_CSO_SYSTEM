@@ -4,6 +4,8 @@ export interface CertificateAttachment {
   name: string;
   contentType: string;
   storagePath?: string;
+  url?: string;
+  resourceType?: string;
 }
 
 export interface CSORecord {
