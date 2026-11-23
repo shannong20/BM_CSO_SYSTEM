@@ -1,40 +1,27 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { createPortal } from 'react-dom';
 import { useAuth } from '@/client/context/AuthContext';
 import {
   CSORecord,
   UNSPECIFIED_VALUE,
   valueOrUnspecified,
 } from '@/client/types';
-import {
-  fetchArchiveCSORecord,
-  fetchCertificateAttachmentUrl,
-  fetchDeleteCSORecord,
-} from '@/client/lib/api';
-import {
-  getLocalCertificateAttachmentUrl,
-  saveLocalCertificate,
-  removeLocalCertificateAttachment,
-  buildLocalAttachment,
-} from '@/client/lib/attachments';
+import { fetchCertificateAttachmentUrl } from '@/client/lib/api';
+import { getLocalCertificateAttachmentUrl } from '@/client/lib/attachments';
 import { StatusBadge } from '@/client/components/StatusBadge';
+import { TablePagination } from '@/client/components/TablePagination';
+import { RecordDetailsModal } from '@/client/components/RecordDetailsModal';
+import { AttachmentPreviewModal } from '@/client/components/AttachmentPreviewModal';
+import { ConfirmDialog } from '@/client/components/ConfirmDialog';
 import {
   Check,
-  X as CloseIcon,
   Eye,
-  MapPin,
-  Mail,
-  Phone,
-  Calendar,
   Paperclip,
   Archive,
   ArchiveRestore,
   Pencil,
   Trash2,
-  ChevronLeft,
-  ChevronRight,
 } from 'lucide-react';
 
 interface CSOTableProps {
@@ -46,6 +33,8 @@ interface CSOTableProps {
   showingArchived?: boolean;
   enablePagination?: boolean;
   defaultPageSize?: number;
+  currentPage?: number;
+  onPageChange?: (page: number) => void;
 }
 
 function displayValue(value: string | null | undefined): string {
@@ -61,9 +50,11 @@ export const CSOTable: React.FC<CSOTableProps> = ({
   showingArchived = false,
   enablePagination = false,
   defaultPageSize = 10,
+  currentPage: controlledPage,
+  onPageChange,
 }) => {
   const { isAdmin } = useAuth();
-  const [currentPage, setCurrentPage] = useState(1);
+  const [internalPage, setInternalPage] = useState(1);
   const [pageSize, setPageSize] = useState(defaultPageSize);
   const [selectedRecord, setSelectedRecord] = useState<CSORecord | null>(null);
   const [viewingAttachment, setViewingAttachment] = useState<{
@@ -75,15 +66,27 @@ export const CSOTable: React.FC<CSOTableProps> = ({
   const [archivingRecordId, setArchivingRecordId] = useState<string | null>(null);
   const [archiveError, setArchiveError] = useState<{ recordId: string; message: string } | null>(null);
   const [deletingRecordId, setDeletingRecordId] = useState<string | null>(null);
+  const [pendingDeleteRecord, setPendingDeleteRecord] = useState<CSORecord | null>(null);
   const [deleteError, setDeleteError] = useState<{ recordId: string; message: string } | null>(null);
   const [uploadingAttachmentRecordId, setUploadingAttachmentRecordId] = useState<string | null>(null);
   const [pendingAttachmentRecord, setPendingAttachmentRecord] = useState<CSORecord | null>(null);
   const [attachmentUploadError, setAttachmentUploadError] = useState<{ recordId: string; message: string } | null>(null);
   const attachmentFileInputRef = useRef<HTMLInputElement>(null);
 
+  const currentPage = controlledPage ?? internalPage;
+  const setCurrentPage = (page: number) => {
+    if (onPageChange) {
+      onPageChange(page);
+    } else {
+      setInternalPage(page);
+    }
+  };
+
   useEffect(() => {
-    setCurrentPage(1);
-  }, [records, pageSize]);
+    if (!controlledPage) {
+      setInternalPage(1);
+    }
+  }, [records, pageSize, controlledPage]);
 
   useEffect(() => {
     setSelectedRecord((current) => {
@@ -93,27 +96,11 @@ export const CSOTable: React.FC<CSOTableProps> = ({
   }, [records]);
 
   const totalPages = enablePagination ? Math.max(1, Math.ceil(records.length / pageSize)) : 1;
-  const safePage = Math.min(currentPage, totalPages);
+  const safePage = Math.min(Math.max(1, currentPage), totalPages);
   const startIndex = enablePagination ? (safePage - 1) * pageSize : 0;
   const displayedRecords = enablePagination
     ? records.slice(startIndex, startIndex + pageSize)
     : records;
-
-  const getPageNumbers = (): (number | 'ellipsis')[] => {
-    if (totalPages <= 7) {
-      return Array.from({ length: totalPages }, (_, i) => i + 1);
-    }
-    const pages: (number | 'ellipsis')[] = [1];
-    if (safePage > 3) pages.push('ellipsis');
-    const start = Math.max(2, safePage - 1);
-    const end = Math.min(totalPages - 1, safePage + 1);
-    for (let i = start; i <= end; i++) {
-      pages.push(i);
-    }
-    if (safePage < totalPages - 2) pages.push('ellipsis');
-    pages.push(totalPages);
-    return pages;
-  };
 
   const handleViewAttachment = async (record: CSORecord) => {
     setOpeningAttachmentRecordId(record.id);
@@ -151,19 +138,21 @@ export const CSOTable: React.FC<CSOTableProps> = ({
     }
   };
 
-  const handleDelete = async (record: CSORecord) => {
-    if (!onDelete || !record.archived) return;
-    if (!window.confirm(`Permanently delete \"${record.organizationName}\"? This cannot be undone.`)) return;
+  const handleConfirmDelete = async () => {
+    if (!onDelete || !pendingDeleteRecord || !pendingDeleteRecord.archived) return;
+    const record = pendingDeleteRecord;
     setDeletingRecordId(record.id);
     setDeleteError(null);
     try {
       await onDelete(record);
-      setSelectedRecord((current) => current?.id === record.id ? null : current);
+      setSelectedRecord((current) => (current?.id === record.id ? null : current));
+      setPendingDeleteRecord(null);
     } catch (error) {
       setDeleteError({
         recordId: record.id,
         message: error instanceof Error ? error.message : 'Could not delete the archived record.',
       });
+      setPendingDeleteRecord(null);
     } finally {
       setDeletingRecordId(null);
     }
@@ -196,7 +185,7 @@ export const CSOTable: React.FC<CSOTableProps> = ({
 
   return (
     <>
-      <div className="w-full min-w-0 rounded-2xl bg-gray-100 p-4 space-y-3">
+      <div className="w-full min-w-0 rounded-2xl bg-gray-100 p-2.5 space-y-2.5">
         <div
           className={
             enablePagination
@@ -212,26 +201,28 @@ export const CSOTable: React.FC<CSOTableProps> = ({
           <table className="w-full min-w-max text-left border-collapse text-sm whitespace-nowrap">
             <thead className="sticky top-0 z-10">
               <tr className="bg-[#27632A] text-white font-bold tracking-wide uppercase text-sm">
-                <th className="py-4 px-3 border-r border-white/20 text-center w-12">NO.</th>
-                <th className="py-4 px-4 border-r border-white/20">SP ACCREDITED</th>
-                <th className="py-4 px-4 border-r border-white/20 min-w-[240px]">ADVOCACY</th>
-                <th className="py-4 px-3 border-r border-white/20">SECTOR</th>
-                <th className="py-4 px-4 border-r border-white/20 min-w-[220px]">NAME OF ORGANIZATION</th>
-                <th className="py-4 px-4 border-r border-white/20">NAME OF REPRESENTATIVE</th>
-                <th className="py-4 px-3 border-r border-white/20">POSITION</th>
-                <th className="py-4 px-4 border-r border-white/20 min-w-[200px]">ADDRESS</th>
-                <th className="py-4 px-3 border-r border-white/20">LGU REPRESENTED</th>
-                <th className="py-4 px-3 border-r border-white/20">CONTACT NUMBER</th>
-                <th className="py-4 px-4 border-r border-white/20">EMAIL ADDRESS</th>
-                <th className="py-4 px-3 border-r border-white/20 text-center">
+                <th className="py-2.5 px-3 border-r border-white/20 text-center w-12">NO.</th>
+                <th className="py-2.5 px-4 border-r border-white/20">SP ACCREDITED</th>
+                <th className="py-2.5 px-4 border-r border-white/20 min-w-[240px]">ADVOCACY</th>
+                <th className="py-2.5 px-3 border-r border-white/20">SECTOR</th>
+                <th className="py-2.5 px-4 border-r border-white/20 min-w-[220px]">NAME OF ORGANIZATION</th>
+                <th className="py-2.5 px-4 border-r border-white/20">NAME OF REPRESENTATIVE</th>
+                <th className="py-2.5 px-3 border-r border-white/20">POSITION</th>
+                <th className="py-2.5 px-4 border-r border-white/20 min-w-[200px]">ADDRESS</th>
+                <th className="py-2.5 px-3 border-r border-white/20">LGU REPRESENTED</th>
+                <th className="py-2.5 px-3 border-r border-white/20">CONTACT NUMBER</th>
+                <th className="py-2.5 px-4 border-r border-white/20">EMAIL ADDRESS</th>
+                <th className="py-2.5 px-3 border-r border-white/20 text-center">
                   ACCREDITING AGENCY<br /><span className="text-sm font-normal">(SEC, CDA etc.)</span>
                 </th>
-                <th className="py-4 px-3 border-r border-white/20 text-center">
+                <th className="py-2.5 px-3 border-r border-white/20 text-center">
                   CHECK IF CSO<br />IS LED WOMEN
                 </th>
-                <th className="py-4 px-3 border-r border-white/20">RESOLUTION NO.</th>
-                <th className="py-4 px-3 border-r border-white/20">DATE ACCREDITED</th>
-                <th className="py-4 px-3 text-center min-w-[190px]">ACTION</th>
+                <th className="py-2.5 px-3 border-r border-white/20">RESOLUTION NO.</th>
+                <th className="py-2.5 px-3 border-r border-white/20">DATE ACCREDITED</th>
+                <th className="sticky right-0 z-20 bg-[#27632A] py-2.5 px-3 text-center min-w-[190px] shadow-[-6px_0_12px_-6px_rgba(0,0,0,0.2)]">
+                  ACTION
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 text-[#374151]">
@@ -248,8 +239,14 @@ export const CSOTable: React.FC<CSOTableProps> = ({
                 displayedRecords.map((record, index) => (
                   <tr
                     key={record.id || index}
-                    className="hover:bg-emerald-50/40 transition-colors group cursor-pointer"
+                    tabIndex={0}
                     onClick={() => setSelectedRecord(record)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && e.target === e.currentTarget) {
+                        setSelectedRecord(record);
+                      }
+                    }}
+                    className="hover:bg-emerald-50/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-[#245b29] transition-colors group cursor-pointer"
                   >
                     <td className="py-3 px-3 text-center font-medium text-[#374151]">
                       {record.no ?? startIndex + index + 1}
@@ -321,9 +318,13 @@ export const CSOTable: React.FC<CSOTableProps> = ({
                     <td className="py-3 px-3 text-[#374151] font-mono text-sm">
                       {displayValue(record.dateAccredited)}
                     </td>
-                    <td className="py-3 px-3 text-center" onClick={(e) => e.stopPropagation()}>
+                    <td
+                      className="sticky right-0 z-10 bg-white group-hover:bg-emerald-50/95 py-3 px-3 text-center shadow-[-6px_0_12px_-6px_rgba(0,0,0,0.08)] transition-colors"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <div className="flex items-center justify-start gap-1">
                         <button
+                          type="button"
                           onClick={() => setSelectedRecord(record)}
                           className="inline-flex min-h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-2 text-[#374151] hover:text-emerald-800 hover:bg-emerald-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#245b29] transition-colors"
                           title="View Details"
@@ -335,6 +336,7 @@ export const CSOTable: React.FC<CSOTableProps> = ({
                           <>
                             {onEdit && (
                               <button
+                                type="button"
                                 onClick={() => onEdit(record)}
                                 className="inline-flex min-h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-2 text-[#374151] hover:text-blue-800 hover:bg-blue-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#245b29] transition-colors"
                                 title={`Edit ${record.organizationName}`}
@@ -344,6 +346,7 @@ export const CSOTable: React.FC<CSOTableProps> = ({
                               </button>
                             )}
                             <button
+                              type="button"
                               onClick={() => handleArchive(record)}
                               disabled={archivingRecordId !== null || deletingRecordId !== null}
                               className="inline-flex min-h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-2 text-[#374151] hover:text-amber-800 hover:bg-amber-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#245b29] disabled:cursor-wait disabled:opacity-60 transition-colors"
@@ -360,7 +363,8 @@ export const CSOTable: React.FC<CSOTableProps> = ({
                             </button>
                             {showingArchived && record.archived && onDelete && (
                               <button
-                                onClick={() => handleDelete(record)}
+                                type="button"
+                                onClick={() => setPendingDeleteRecord(record)}
                                 disabled={deletingRecordId !== null || archivingRecordId !== null}
                                 className="inline-flex min-h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-2 text-red-700 hover:bg-red-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700 disabled:cursor-wait disabled:opacity-60 transition-colors"
                                 title={`Permanently delete ${record.organizationName}`}
@@ -369,35 +373,26 @@ export const CSOTable: React.FC<CSOTableProps> = ({
                                 <span>{deletingRecordId === record.id ? 'Deleting...' : 'Delete'}</span>
                               </button>
                             )}
-                            <button
-                              type="button"
-                              onClick={() => handleAddAttachmentClick(record)}
-                              disabled={uploadingAttachmentRecordId !== null}
-                              title="Add attachment"
-                              aria-label="Add attachment"
-                              className="inline-flex min-h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-2 text-[#374151] hover:text-emerald-800 hover:bg-emerald-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#245b29] disabled:cursor-wait disabled:opacity-60 transition-colors"
-                            >
-                              <Paperclip size={15} />
-                              <span>
-                                {uploadingAttachmentRecordId === record.id ? 'Uploading...' : 'Add attachment'}
-                              </span>
-                            </button>
-                            <input
-                              ref={attachmentFileInputRef}
-                              type="file"
-                              accept=".pdf,.png,.jpg,.jpeg,.doc,.docx"
-                              hidden
-                              onChange={(e) => {
-                                const file = e.target.files?.[0];
-                                if (file && pendingAttachmentRecord) {
-                                  handleAddAttachment(pendingAttachmentRecord, file);
-                                }
-                              }}
-                            />
+                            {onAddAttachment && (
+                              <button
+                                type="button"
+                                onClick={() => handleAddAttachmentClick(record)}
+                                disabled={uploadingAttachmentRecordId !== null}
+                                title="Add attachment"
+                                aria-label="Add attachment"
+                                className="inline-flex min-h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-2 text-[#374151] hover:text-emerald-800 hover:bg-emerald-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#245b29] disabled:cursor-wait disabled:opacity-60 transition-colors"
+                              >
+                                <Paperclip size={15} />
+                                <span>
+                                  {uploadingAttachmentRecordId === record.id ? 'Uploading...' : 'Add attachment'}
+                                </span>
+                              </button>
+                            )}
                           </>
                         )}
                         {record.certificateAttachment && (
                           <button
+                            type="button"
                             onClick={() => handleViewAttachment(record)}
                             disabled={openingAttachmentRecordId !== null}
                             className="inline-flex min-h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-2 text-[#374151] hover:text-emerald-800 hover:bg-emerald-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#245b29] disabled:cursor-wait disabled:opacity-60 transition-colors"
@@ -436,286 +431,69 @@ export const CSOTable: React.FC<CSOTableProps> = ({
           </table>
         </div>
 
-        {enablePagination && records.length > 0 && (
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 rounded-xl bg-white px-4 py-3 text-sm text-[#374151]">
-            <div className="flex items-center gap-3">
-              <span>
-                Showing <span className="font-semibold text-gray-900">{startIndex + 1}</span>
-                {'–'}
-                <span className="font-semibold text-gray-900">
-                  {Math.min(startIndex + pageSize, records.length)}
-                </span>{' '}
-                of <span className="font-semibold text-gray-900">{records.length}</span>
-              </span>
-              <label className="inline-flex items-center gap-1.5">
-                <span className="text-gray-600">Rows:</span>
-                <select
-                  aria-label="Rows per page"
-                  value={pageSize}
-                  onChange={(e) => setPageSize(Number(e.target.value))}
-                  className="min-h-9 rounded-lg border border-gray-200 bg-white px-2 py-1 text-sm font-medium text-gray-800 focus:border-[#245b29] focus:outline-none"
-                >
-                  <option value={10}>10</option>
-                  <option value={25}>25</option>
-                  <option value={50}>50</option>
-                </select>
-              </label>
-            </div>
+        <input
+          ref={attachmentFileInputRef}
+          type="file"
+          accept=".pdf,.png,.jpg,.jpeg,.doc,.docx"
+          hidden
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file && pendingAttachmentRecord) {
+              handleAddAttachment(pendingAttachmentRecord, file);
+            }
+          }}
+        />
 
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                disabled={safePage <= 1}
-                aria-label="Previous page"
-                className="inline-flex min-h-9 items-center gap-1 rounded-lg border border-gray-200 px-2.5 py-1.5 font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-45"
-              >
-                <ChevronLeft size={15} />
-                <span className="hidden sm:inline">Prev</span>
-              </button>
-
-              {getPageNumbers().map((item, idx) =>
-                item === 'ellipsis' ? (
-                  <span key={`ellipsis-${idx}`} className="px-2 text-gray-400">
-                    ...
-                  </span>
-                ) : (
-                  <button
-                    key={item}
-                    type="button"
-                    onClick={() => setCurrentPage(item)}
-                    aria-current={item === safePage ? 'page' : undefined}
-                    className={`min-h-9 min-w-9 rounded-lg px-2.5 py-1.5 font-semibold transition-colors ${
-                      item === safePage
-                        ? 'bg-[#27632A] text-white shadow-sm'
-                        : 'border border-gray-200 text-gray-700 hover:bg-gray-50'
-                    }`}
-                  >
-                    {item}
-                  </button>
-                )
-              )}
-
-              <button
-                type="button"
-                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                disabled={safePage >= totalPages}
-                aria-label="Next page"
-                className="inline-flex min-h-9 items-center gap-1 rounded-lg border border-gray-200 px-2.5 py-1.5 font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-45"
-              >
-                <span className="hidden sm:inline">Next</span>
-                <ChevronRight size={15} />
-              </button>
-            </div>
-          </div>
+        {enablePagination && (
+          <TablePagination
+            totalItems={records.length}
+            currentPage={safePage}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(size) => {
+              setPageSize(size);
+              setCurrentPage(1);
+            }}
+          />
         )}
       </div>
 
-      {/* Record Details Modal */}
-      {selectedRecord && typeof document !== 'undefined' && createPortal(
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-xl w-full max-h-[90vh] overflow-y-auto p-6 border border-[#E5E7EB] shadow-[0_4px_12px_rgba(0,0,0,0.08)] relative animate-fadeIn">
-            <button
-              onClick={() => setSelectedRecord(null)}
-              className="absolute top-5 right-5 inline-flex min-h-10 min-w-10 items-center justify-center rounded-lg text-[#374151] hover:text-gray-900 hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#245b29]"
-              aria-label="Close record details"
-            >
-              <CloseIcon size={18} />
-            </button>
+      <RecordDetailsModal
+        record={selectedRecord}
+        isAdmin={isAdmin}
+        onClose={() => setSelectedRecord(null)}
+        onEdit={onEdit}
+        onViewAttachment={handleViewAttachment}
+        onAddAttachmentClick={onAddAttachment ? handleAddAttachmentClick : undefined}
+        openingAttachmentRecordId={openingAttachmentRecordId}
+        uploadingAttachmentRecordId={uploadingAttachmentRecordId}
+        attachmentError={attachmentError}
+        attachmentUploadError={attachmentUploadError}
+      />
 
-            <div className="flex items-center gap-2 mb-2">
-              {selectedRecord.status === 'Unknown' ? (
-                <span className="text-sm text-gray-500">{UNSPECIFIED_VALUE}</span>
-              ) : (
-                <StatusBadge status={selectedRecord.status} />
-              )}
-              {(selectedRecord.isWomenLed === true || selectedRecord.isWomenLed === false) && (
-                <span className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full font-semibold text-sm ${
-                  selectedRecord.isWomenLed
-                    ? 'bg-[#E8F5E9] text-[#245b29]'
-                    : 'bg-gray-100 text-gray-700'
-                }`}>
-                  {selectedRecord.isWomenLed && <Check size={12} strokeWidth={3} />}
-                  {selectedRecord.isWomenLed ? 'Women-Led Organization' : 'Not Women-Led'}
-                </span>
-              )}
-              {selectedRecord.isWomenLed !== true && selectedRecord.isWomenLed !== false && (
-                <span className="inline-flex items-center px-3 py-1.5 rounded-full bg-gray-100 text-gray-700 font-semibold text-sm">
-                  Women-Led: {UNSPECIFIED_VALUE}
-                </span>
-              )}
-            </div>
+      <AttachmentPreviewModal
+        viewingAttachment={viewingAttachment}
+        onClose={() => {
+          if (viewingAttachment?.url.startsWith('blob:')) {
+            URL.revokeObjectURL(viewingAttachment.url);
+          }
+          setViewingAttachment(null);
+        }}
+      />
 
-            <h2 className="text-xl font-bold text-gray-900 mt-2">
-              {displayValue(selectedRecord.organizationName)}
-            </h2>
-            <p className="text-sm text-[#374151] mt-1 flex items-center gap-1">
-              <MapPin size={13} className="text-emerald-700" />
-              {displayValue(selectedRecord.address)} ({displayValue(selectedRecord.lguRepresented)})
-            </p>
-
-            <div className="mt-5 p-4 rounded-xl bg-gray-50">
-              <span className="text-sm font-bold uppercase tracking-wider text-[#374151] block mb-1">
-                ADVOCACY & PURPOSE
-              </span>
-              <p className="text-sm text-[#374151] leading-relaxed font-medium">
-                {displayValue(selectedRecord.advocacy)}
-              </p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 mt-5 text-sm">
-              <div>
-                <span className="text-[#374151] block">Sector</span>
-                <span className="font-semibold text-gray-800">{displayValue(selectedRecord.sector)}</span>
-              </div>
-              <div>
-                <span className="text-[#374151] block">Accrediting Agency</span>
-                <span className="font-semibold text-gray-800">{displayValue(selectedRecord.accreditingAgency)}</span>
-              </div>
-              <div>
-                <span className="text-[#374151] block">Representative</span>
-                <span className="font-semibold text-gray-800">{displayValue(selectedRecord.representativeName)}</span>
-                <span className="text-sm text-[#374151] block">{displayValue(selectedRecord.position)}</span>
-              </div>
-              <div>
-                <span className="text-[#374151] block">Resolution No.</span>
-                <span className="font-mono font-semibold text-gray-800">{displayValue(selectedRecord.resolutionNo)}</span>
-              </div>
-              <div className="col-span-2 pt-2 border-t border-gray-200 flex flex-wrap gap-4 text-[#374151]">
-                <span className="flex items-center gap-1.5">
-                  <Phone size={13} /> {displayValue(selectedRecord.contactNumber)}
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <Mail size={13} /> {displayValue(selectedRecord.emailAddress)}
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <Calendar size={13} /> Accredited: {displayValue(selectedRecord.dateAccredited)}
-                </span>
-              </div>
-              <div className="col-span-2 pt-3 border-t border-gray-200 space-y-2">
-                <span className="text-[#374151] block font-medium">Attachment</span>
-                <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-gray-50 px-3 py-2.5">
-                  <span className="truncate text-sm text-gray-700">
-                    {selectedRecord.certificateAttachment
-                      ? selectedRecord.certificateAttachment.name
-                      : 'No file attached.'}
-                  </span>
-                  <div className="flex items-center gap-2 shrink-0">
-                    {selectedRecord.certificateAttachment && (
-                      <button
-                        type="button"
-                        onClick={() => handleViewAttachment(selectedRecord)}
-                        disabled={openingAttachmentRecordId !== null}
-                        className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-emerald-200 bg-white px-3 text-sm font-semibold text-[#245b29] hover:bg-emerald-50 disabled:opacity-60"
-                      >
-                        <Paperclip size={14} />
-                        {openingAttachmentRecordId === selectedRecord.id ? 'Opening...' : 'View attachment'}
-                      </button>
-                    )}
-                    {isAdmin && onAddAttachment && (
-                      <button
-                        type="button"
-                        onClick={() => handleAddAttachmentClick(selectedRecord)}
-                        disabled={uploadingAttachmentRecordId !== null}
-                        className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 text-sm font-semibold text-[#374151] hover:bg-gray-100 disabled:opacity-60"
-                      >
-                        <Paperclip size={14} />
-                        {uploadingAttachmentRecordId === selectedRecord.id
-                          ? 'Uploading...'
-                          : selectedRecord.certificateAttachment
-                            ? 'Replace'
-                            : 'Add attachment'}
-                      </button>
-                    )}
-                  </div>
-                </div>
-                {attachmentError?.recordId === selectedRecord.id && (
-                  <p className="text-xs text-red-700" role="alert">
-                    {attachmentError.message}
-                  </p>
-                )}
-                {attachmentUploadError?.recordId === selectedRecord.id && (
-                  <p className="text-xs text-red-700" role="alert">
-                    {attachmentUploadError.message}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            <div className="mt-6 pt-4 border-t border-gray-100 flex justify-end gap-3">
-              {isAdmin && onEdit && (
-                <button
-                  onClick={() => {
-                    onEdit(selectedRecord);
-                    setSelectedRecord(null);
-                  }}
-                  className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-gray-300 bg-white px-5 py-2 text-sm font-semibold text-[#374151] shadow-sm transition-colors hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#245b29]"
-                >
-                  <Pencil size={15} />
-                  Edit
-                </button>
-              )}
-              <button
-                onClick={() => setSelectedRecord(null)}
-                className="min-h-10 px-5 py-2 rounded-xl bg-[#315f2b] hover:bg-[#244b20] text-white text-sm font-semibold shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#245b29] transition-colors"
-              >
-                Close Preview
-              </button>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
-      {viewingAttachment && typeof document !== 'undefined' && createPortal(
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <div className="flex h-[min(90vh,900px)] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-gray-200 px-5 py-3">
-              <h2 className="truncate pr-4 text-sm font-semibold text-gray-900">
-                {viewingAttachment.record.certificateAttachment?.name || 'Attachment'}
-              </h2>
-              <button
-                type="button"
-                onClick={() => {
-                  if (viewingAttachment.url.startsWith('blob:')) {
-                    URL.revokeObjectURL(viewingAttachment.url);
-                  }
-                  setViewingAttachment(null);
-                }}
-                className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-lg text-gray-600 hover:bg-gray-100 hover:text-gray-900"
-                aria-label="Close attachment preview"
-              >
-                <CloseIcon size={18} />
-              </button>
-            </div>
-            <iframe
-              src={viewingAttachment.url}
-              title={viewingAttachment.record.certificateAttachment?.name || 'Attachment'}
-              className="min-h-0 flex-1 border-0"
-            />
-            <div className="flex items-center justify-between gap-4 border-t border-gray-200 px-5 py-3 text-sm">
-              <span className="text-gray-600">If the preview is blank, open or download the file directly.</span>
-              <div className="flex shrink-0 gap-3">
-                <a
-                  href={viewingAttachment.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="font-semibold text-[#245b29] underline"
-                >
-                  Open file
-                </a>
-                <a
-                  href={viewingAttachment.url}
-                  download={viewingAttachment.record.certificateAttachment?.name || true}
-                  className="font-semibold text-[#245b29] underline"
-                >
-                  Download
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
+      <ConfirmDialog
+        isOpen={Boolean(pendingDeleteRecord)}
+        title="Delete archived record?"
+        description={
+          pendingDeleteRecord
+            ? `Permanently delete "${pendingDeleteRecord.organizationName}"? This cannot be undone.`
+            : ''
+        }
+        confirmLabel="Delete permanently"
+        isLoading={deletingRecordId !== null}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setPendingDeleteRecord(null)}
+      />
     </>
   );
 };
