@@ -380,6 +380,7 @@ export default function DirectoryPage() {
         }}
         onAddAttachment={handleAddAttachment}
         showingArchived={showArchived}
+        enablePagination
       />
 
       {/* Registration Modal Overlay (admin only) */}

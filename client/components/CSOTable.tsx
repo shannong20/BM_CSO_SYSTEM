@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuth } from '@/client/context/AuthContext';
 import {
   CSORecord,
@@ -32,6 +33,8 @@ import {
   ArchiveRestore,
   Pencil,
   Trash2,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 
 interface CSOTableProps {
@@ -41,6 +44,8 @@ interface CSOTableProps {
   onEdit?: (record: CSORecord) => void;
   onAddAttachment?: (record: CSORecord, file: File) => Promise<void>;
   showingArchived?: boolean;
+  enablePagination?: boolean;
+  defaultPageSize?: number;
 }
 
 function displayValue(value: string | null | undefined): string {
@@ -54,8 +59,12 @@ export const CSOTable: React.FC<CSOTableProps> = ({
   onEdit,
   onAddAttachment,
   showingArchived = false,
+  enablePagination = false,
+  defaultPageSize = 10,
 }) => {
   const { isAdmin } = useAuth();
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(defaultPageSize);
   const [selectedRecord, setSelectedRecord] = useState<CSORecord | null>(null);
   const [viewingAttachment, setViewingAttachment] = useState<{
     record: CSORecord;
@@ -72,6 +81,40 @@ export const CSOTable: React.FC<CSOTableProps> = ({
   const [attachmentUploadError, setAttachmentUploadError] = useState<{ recordId: string; message: string } | null>(null);
   const attachmentFileInputRef = useRef<HTMLInputElement>(null);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [records, pageSize]);
+
+  useEffect(() => {
+    setSelectedRecord((current) => {
+      if (!current) return null;
+      return records.find((r) => r.id === current.id) ?? current;
+    });
+  }, [records]);
+
+  const totalPages = enablePagination ? Math.max(1, Math.ceil(records.length / pageSize)) : 1;
+  const safePage = Math.min(currentPage, totalPages);
+  const startIndex = enablePagination ? (safePage - 1) * pageSize : 0;
+  const displayedRecords = enablePagination
+    ? records.slice(startIndex, startIndex + pageSize)
+    : records;
+
+  const getPageNumbers = (): (number | 'ellipsis')[] => {
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+    const pages: (number | 'ellipsis')[] = [1];
+    if (safePage > 3) pages.push('ellipsis');
+    const start = Math.max(2, safePage - 1);
+    const end = Math.min(totalPages - 1, safePage + 1);
+    for (let i = start; i <= end; i++) {
+      pages.push(i);
+    }
+    if (safePage < totalPages - 2) pages.push('ellipsis');
+    pages.push(totalPages);
+    return pages;
+  };
+
   const handleViewAttachment = async (record: CSORecord) => {
     setOpeningAttachmentRecordId(record.id);
     setAttachmentError(null);
@@ -85,7 +128,7 @@ export const CSOTable: React.FC<CSOTableProps> = ({
     } catch (error) {
       setAttachmentError({
         recordId: record.id,
-        message: error instanceof Error ? error.message : 'Could not open the certificate.',
+        message: error instanceof Error ? error.message : 'Could not open the attachment.',
       });
     } finally {
       setOpeningAttachmentRecordId(null);
@@ -153,10 +196,18 @@ export const CSOTable: React.FC<CSOTableProps> = ({
 
   return (
     <>
-      <div className="w-full min-w-0 rounded-2xl bg-gray-100 p-4">
+      <div className="w-full min-w-0 rounded-2xl bg-gray-100 p-4 space-y-3">
         <div
-          className="rounded-xl bg-white overflow-auto overscroll-contain"
-          style={{ maxHeight: 'calc(100vh - 300px)', minHeight: '320px' }}
+          className={
+            enablePagination
+              ? 'rounded-xl bg-white overflow-x-auto'
+              : 'rounded-xl bg-white overflow-auto overscroll-contain'
+          }
+          style={
+            enablePagination
+              ? undefined
+              : { maxHeight: 'calc(100vh - 300px)', minHeight: '320px' }
+          }
         >
           <table className="w-full min-w-max text-left border-collapse text-sm whitespace-nowrap">
             <thead className="sticky top-0 z-10">
@@ -184,7 +235,7 @@ export const CSOTable: React.FC<CSOTableProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 text-[#374151]">
-              {records.length === 0 ? (
+              {displayedRecords.length === 0 ? (
                 <tr>
                   <td colSpan={16} className="py-12 text-center text-[#374151]">
                     <p className="text-sm font-medium">
@@ -194,14 +245,14 @@ export const CSOTable: React.FC<CSOTableProps> = ({
                   </td>
                 </tr>
               ) : (
-                records.map((record, index) => (
+                displayedRecords.map((record, index) => (
                   <tr
                     key={record.id || index}
                     className="hover:bg-emerald-50/40 transition-colors group cursor-pointer"
                     onClick={() => setSelectedRecord(record)}
                   >
                     <td className="py-3 px-3 text-center font-medium text-[#374151]">
-                      {record.no ?? index + 1}
+                      {record.no ?? startIndex + index + 1}
                     </td>
                     <td className="py-3 px-4">
                       {record.status === 'Unknown' ? (
@@ -322,8 +373,8 @@ export const CSOTable: React.FC<CSOTableProps> = ({
                               type="button"
                               onClick={() => handleAddAttachmentClick(record)}
                               disabled={uploadingAttachmentRecordId !== null}
-                              title="Add certificate attachment"
-                              aria-label="Add certificate attachment"
+                              title="Add attachment"
+                              aria-label="Add attachment"
                               className="inline-flex min-h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-2 text-[#374151] hover:text-emerald-800 hover:bg-emerald-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#245b29] disabled:cursor-wait disabled:opacity-60 transition-colors"
                             >
                               <Paperclip size={15} />
@@ -350,7 +401,7 @@ export const CSOTable: React.FC<CSOTableProps> = ({
                             onClick={() => handleViewAttachment(record)}
                             disabled={openingAttachmentRecordId !== null}
                             className="inline-flex min-h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-2 text-[#374151] hover:text-emerald-800 hover:bg-emerald-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#245b29] disabled:cursor-wait disabled:opacity-60 transition-colors"
-                            title={`View certificate: ${record.certificateAttachment.name}`}
+                            title={`View attachment: ${record.certificateAttachment.name}`}
                           >
                             <Paperclip size={15} />
                             <span>{openingAttachmentRecordId === record.id ? 'Opening...' : 'View attachment'}</span>
@@ -384,12 +435,86 @@ export const CSOTable: React.FC<CSOTableProps> = ({
             </tbody>
           </table>
         </div>
+
+        {enablePagination && records.length > 0 && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 rounded-xl bg-white px-4 py-3 text-sm text-[#374151]">
+            <div className="flex items-center gap-3">
+              <span>
+                Showing <span className="font-semibold text-gray-900">{startIndex + 1}</span>
+                {'–'}
+                <span className="font-semibold text-gray-900">
+                  {Math.min(startIndex + pageSize, records.length)}
+                </span>{' '}
+                of <span className="font-semibold text-gray-900">{records.length}</span>
+              </span>
+              <label className="inline-flex items-center gap-1.5">
+                <span className="text-gray-600">Rows:</span>
+                <select
+                  aria-label="Rows per page"
+                  value={pageSize}
+                  onChange={(e) => setPageSize(Number(e.target.value))}
+                  className="min-h-9 rounded-lg border border-gray-200 bg-white px-2 py-1 text-sm font-medium text-gray-800 focus:border-[#245b29] focus:outline-none"
+                >
+                  <option value={10}>10</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                </select>
+              </label>
+            </div>
+
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={safePage <= 1}
+                aria-label="Previous page"
+                className="inline-flex min-h-9 items-center gap-1 rounded-lg border border-gray-200 px-2.5 py-1.5 font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-45"
+              >
+                <ChevronLeft size={15} />
+                <span className="hidden sm:inline">Prev</span>
+              </button>
+
+              {getPageNumbers().map((item, idx) =>
+                item === 'ellipsis' ? (
+                  <span key={`ellipsis-${idx}`} className="px-2 text-gray-400">
+                    ...
+                  </span>
+                ) : (
+                  <button
+                    key={item}
+                    type="button"
+                    onClick={() => setCurrentPage(item)}
+                    aria-current={item === safePage ? 'page' : undefined}
+                    className={`min-h-9 min-w-9 rounded-lg px-2.5 py-1.5 font-semibold transition-colors ${
+                      item === safePage
+                        ? 'bg-[#27632A] text-white shadow-sm'
+                        : 'border border-gray-200 text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    {item}
+                  </button>
+                )
+              )}
+
+              <button
+                type="button"
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                disabled={safePage >= totalPages}
+                aria-label="Next page"
+                className="inline-flex min-h-9 items-center gap-1 rounded-lg border border-gray-200 px-2.5 py-1.5 font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-45"
+              >
+                <span className="hidden sm:inline">Next</span>
+                <ChevronRight size={15} />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Record Details Modal */}
-      {selectedRecord && (
+      {selectedRecord && typeof document !== 'undefined' && createPortal(
         <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-xl w-full p-6 border border-[#E5E7EB] shadow-[0_4px_12px_rgba(0,0,0,0.08)] relative animate-fadeIn">
+          <div className="bg-white rounded-2xl max-w-xl w-full max-h-[90vh] overflow-y-auto p-6 border border-[#E5E7EB] shadow-[0_4px_12px_rgba(0,0,0,0.08)] relative animate-fadeIn">
             <button
               onClick={() => setSelectedRecord(null)}
               className="absolute top-5 right-5 inline-flex min-h-10 min-w-10 items-center justify-center rounded-lg text-[#374151] hover:text-gray-900 hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#245b29]"
@@ -467,19 +592,54 @@ export const CSOTable: React.FC<CSOTableProps> = ({
                   <Calendar size={13} /> Accredited: {displayValue(selectedRecord.dateAccredited)}
                 </span>
               </div>
-              {selectedRecord.certificateAttachment && (
-                <div className="col-span-2">
-                  <button
-                    type="button"
-                    onClick={() => handleViewAttachment(selectedRecord)}
-                    disabled={openingAttachmentRecordId !== null}
-                    className="inline-flex min-h-10 items-center gap-2 rounded-lg px-3 text-sm font-semibold text-[#245b29] hover:bg-emerald-50 disabled:opacity-60"
-                  >
-                    <Paperclip size={15} />
-                    {openingAttachmentRecordId === selectedRecord.id ? 'Opening attachment...' : 'View attachment'}
-                  </button>
+              <div className="col-span-2 pt-3 border-t border-gray-200 space-y-2">
+                <span className="text-[#374151] block font-medium">Attachment</span>
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-gray-50 px-3 py-2.5">
+                  <span className="truncate text-sm text-gray-700">
+                    {selectedRecord.certificateAttachment
+                      ? selectedRecord.certificateAttachment.name
+                      : 'No file attached.'}
+                  </span>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {selectedRecord.certificateAttachment && (
+                      <button
+                        type="button"
+                        onClick={() => handleViewAttachment(selectedRecord)}
+                        disabled={openingAttachmentRecordId !== null}
+                        className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-emerald-200 bg-white px-3 text-sm font-semibold text-[#245b29] hover:bg-emerald-50 disabled:opacity-60"
+                      >
+                        <Paperclip size={14} />
+                        {openingAttachmentRecordId === selectedRecord.id ? 'Opening...' : 'View attachment'}
+                      </button>
+                    )}
+                    {isAdmin && onAddAttachment && (
+                      <button
+                        type="button"
+                        onClick={() => handleAddAttachmentClick(selectedRecord)}
+                        disabled={uploadingAttachmentRecordId !== null}
+                        className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 text-sm font-semibold text-[#374151] hover:bg-gray-100 disabled:opacity-60"
+                      >
+                        <Paperclip size={14} />
+                        {uploadingAttachmentRecordId === selectedRecord.id
+                          ? 'Uploading...'
+                          : selectedRecord.certificateAttachment
+                            ? 'Replace'
+                            : 'Add attachment'}
+                      </button>
+                    )}
+                  </div>
                 </div>
-              )}
+                {attachmentError?.recordId === selectedRecord.id && (
+                  <p className="text-xs text-red-700" role="alert">
+                    {attachmentError.message}
+                  </p>
+                )}
+                {attachmentUploadError?.recordId === selectedRecord.id && (
+                  <p className="text-xs text-red-700" role="alert">
+                    {attachmentUploadError.message}
+                  </p>
+                )}
+              </div>
             </div>
 
             <div className="mt-6 pt-4 border-t border-gray-100 flex justify-end gap-3">
@@ -503,14 +663,15 @@ export const CSOTable: React.FC<CSOTableProps> = ({
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
-      {viewingAttachment && (
+      {viewingAttachment && typeof document !== 'undefined' && createPortal(
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
           <div className="flex h-[min(90vh,900px)] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-gray-200 px-5 py-3">
               <h2 className="truncate pr-4 text-sm font-semibold text-gray-900">
-                {viewingAttachment.record.certificateAttachment?.name || 'CSO certificate'}
+                {viewingAttachment.record.certificateAttachment?.name || 'Attachment'}
               </h2>
               <button
                 type="button"
@@ -521,14 +682,14 @@ export const CSOTable: React.FC<CSOTableProps> = ({
                   setViewingAttachment(null);
                 }}
                 className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-lg text-gray-600 hover:bg-gray-100 hover:text-gray-900"
-                aria-label="Close certificate preview"
+                aria-label="Close attachment preview"
               >
                 <CloseIcon size={18} />
               </button>
             </div>
             <iframe
               src={viewingAttachment.url}
-              title={viewingAttachment.record.certificateAttachment?.name || 'CSO certificate'}
+              title={viewingAttachment.record.certificateAttachment?.name || 'Attachment'}
               className="min-h-0 flex-1 border-0"
             />
             <div className="flex items-center justify-between gap-4 border-t border-gray-200 px-5 py-3 text-sm">
@@ -552,7 +713,8 @@ export const CSOTable: React.FC<CSOTableProps> = ({
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
