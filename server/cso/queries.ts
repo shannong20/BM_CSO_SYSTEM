@@ -7,7 +7,6 @@
 
 import {
   db,
-  storage,
   isFirebaseConfigured,
 } from '@/server/firebase';
 import {
@@ -19,12 +18,7 @@ import {
   deleteDoc,
   Timestamp,
 } from 'firebase/firestore';
-import {
-  deleteObject,
-  getDownloadURL,
-  ref,
-  uploadBytes,
-} from 'firebase/storage';
+import { deleteFromCloudinary } from '@/server/cloudinary';
 import type { CSORecord, CSORecordInput, CertificateAttachment } from '@/shared/types';
 import { valueOrUnspecified } from '@/shared/types';
 
@@ -238,15 +232,41 @@ export async function deleteFirestoreCSORecord(record: CSORecord): Promise<void>
     throw new Error('This archived CSO record could not be found in the database.');
   }
 
-  if (record.certificateAttachment?.storagePath && storage) {
-    await deleteObject(ref(storage, record.certificateAttachment.storagePath));
+  if (record.certificateAttachment?.storagePath) {
+    await deleteFromCloudinary(
+      record.certificateAttachment.storagePath,
+      record.certificateAttachment.resourceType
+    );
   }
 
   await deleteDoc(recordRef);
 }
 
 /**
- * Get a download URL for a certificate attachment stored in Firebase Storage.
+ * Fetch a single CSO record by id from Firestore.
+ */
+export async function getFirestoreCSORecordById(id: string): Promise<CSORecord | null> {
+  if (!isFirebaseConfigured || !db) {
+    return null;
+  }
+
+  const manualRecordRef = doc(db, COLLECTION_MANUAL, id);
+  const manualSnapshot = await getDoc(manualRecordRef);
+  if (manualSnapshot.exists()) {
+    return mapDocToRecord(manualSnapshot.id, manualSnapshot.data(), 1);
+  }
+
+  const seededRecordRef = doc(db, COLLECTION_SEEDED, id);
+  const seededSnapshot = await getDoc(seededRecordRef);
+  if (seededSnapshot.exists()) {
+    return mapDocToRecord(seededSnapshot.id, seededSnapshot.data(), 1);
+  }
+
+  return null;
+}
+
+/**
+ * Get a download URL for a certificate attachment stored in Cloudinary.
  */
 export async function getFirestoreCertificateAttachmentUrl(record: CSORecord): Promise<string> {
   const attachment = record.certificateAttachment;
@@ -254,36 +274,23 @@ export async function getFirestoreCertificateAttachmentUrl(record: CSORecord): P
     throw new Error('No certificate attachment is available for this CSO.');
   }
 
-  if (!attachment.storagePath) {
-    throw new Error('No storage path on certificate attachment.');
+  if (!attachment.url) {
+    throw new Error('No attachment URL is available for this CSO.');
   }
 
-  if (!isFirebaseConfigured || !storage) {
-    throw new Error('Firebase Storage is not available to open this certificate.');
-  }
-
-  return getDownloadURL(ref(storage, attachment.storagePath));
+  return attachment.url;
 }
 
 /**
- * Add a certificate attachment to a CSO record (Firebase Storage).
+ * Save a Cloudinary certificate attachment metadata object onto a CSO record in Firestore.
  */
-export async function addFirestoreCertificateAttachment(
+export async function saveFirestoreCertificateAttachment(
   record: CSORecord,
-  file: File
+  attachment: CertificateAttachment
 ): Promise<CSORecord> {
-  if (!isFirebaseConfigured || !storage || !db) {
-    throw new Error('Firebase Storage is not configured on the server.');
+  if (!isFirebaseConfigured || !db) {
+    throw new Error('Firebase is not configured on the server.');
   }
-
-  const attachment: CertificateAttachment = {
-    name: file.name,
-    contentType: file.type,
-  };
-
-  const storageRef = ref(storage, `certificate_attachments/${record.id}/${file.name}`);
-  await uploadBytes(storageRef, file);
-  attachment.storagePath = storageRef.fullPath;
 
   const manualRecordRef = doc(db, COLLECTION_MANUAL, record.id);
   const manualSnapshot = await getDoc(manualRecordRef);
@@ -292,6 +299,11 @@ export async function addFirestoreCertificateAttachment(
 
   if (!snapshot.exists()) {
     throw new Error('This CSO record could not be found in the database.');
+  }
+
+  const previousPath = record.certificateAttachment?.storagePath;
+  if (previousPath && previousPath !== attachment.storagePath) {
+    await deleteFromCloudinary(previousPath, record.certificateAttachment?.resourceType);
   }
 
   await setDoc(recordRef, { certificateAttachment: attachment }, { merge: true });
