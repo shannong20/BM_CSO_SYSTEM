@@ -9,6 +9,7 @@ import {
 } from '@/client/types';
 import {
   fetchArchiveCSORecord,
+  fetchCertificateAttachmentUrl,
   fetchDeleteCSORecord,
 } from '@/client/lib/api';
 import {
@@ -75,7 +76,11 @@ export const CSOTable: React.FC<CSOTableProps> = ({
     setOpeningAttachmentRecordId(record.id);
     setAttachmentError(null);
     try {
-      const url = await getLocalCertificateAttachmentUrl(record.id);
+      const url = record.certificateAttachment?.url
+        ? record.certificateAttachment.url
+        : record.certificateAttachment?.storagePath
+          ? await fetchCertificateAttachmentUrl(record.id)
+          : await getLocalCertificateAttachmentUrl(record.id);
       setViewingAttachment({ record, url });
     } catch (error) {
       setAttachmentError({

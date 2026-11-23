@@ -97,28 +97,80 @@ export async function fetchDeleteCSORecord(id: string): Promise<void> {
 
 /** GET /api/cso/:id/attachment - get certificate attachment URL */
 export async function fetchCertificateAttachmentUrl(id: string): Promise<string> {
-  const res = await request<{ success: boolean; data: { url: string } }>(
-    `/api/cso/${id}/attachment`
-  );
-  return res.data?.data.url ?? '';
+  const res = await request<{ url: string }>(`/api/cso/${id}/attachment`);
+  return res.data?.url ?? '';
 }
 
-/** POST /api/cso/:id/attachment - upload certificate attachment */
+interface SignedCloudinaryUpload {
+  uploadUrl: string;
+  apiKey: string;
+  timestamp: number;
+  signature: string;
+  folder: string;
+  publicId: string;
+}
+
+/**
+ * POST /api/cso/:id/attachment - direct signed upload to Cloudinary,
+ * then persist the resulting attachment metadata to Firestore.
+ */
 export async function fetchUploadCertificateAttachment(
   id: string,
   file: File
 ): Promise<CSORecord> {
+  const signRes = await request<SignedCloudinaryUpload>(`/api/cso/${id}/attachment`, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'sign' }),
+  });
+
+  const signed = signRes.data;
+  if (!signed) {
+    throw new Error('Could not get signed upload parameters.');
+  }
+
   const formData = new FormData();
   formData.append('file', file);
-  const res = await fetch(`/api/cso/${id}/attachment`, {
+  formData.append('api_key', signed.apiKey);
+  formData.append('timestamp', String(signed.timestamp));
+  formData.append('signature', signed.signature);
+  formData.append('folder', signed.folder);
+  formData.append('public_id', signed.publicId);
+
+  const cloudRes = await fetch(signed.uploadUrl, {
     method: 'POST',
     body: formData,
   });
-  if (!res.ok) {
-    const body = (await res.json()) as { error?: string };
-    throw new Error(body.error || 'Upload failed');
+
+  const cloudData = (await cloudRes.json()) as {
+    public_id?: string;
+    secure_url?: string;
+    resource_type?: string;
+    error?: { message?: string };
+  };
+
+  if (!cloudRes.ok || !cloudData.public_id || !cloudData.secure_url) {
+    throw new Error(cloudData.error?.message || 'Cloudinary upload failed');
   }
-  return (await res.json()) as CSORecord;
+
+  const completeRes = await fetch(`/api/cso/${id}/attachment`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      action: 'complete',
+      name: file.name,
+      contentType: file.type,
+      storagePath: cloudData.public_id,
+      url: cloudData.secure_url,
+      resourceType: cloudData.resource_type,
+    }),
+  });
+
+  if (!completeRes.ok) {
+    const body = (await completeRes.json()) as { error?: string };
+    throw new Error(body.error || 'Failed to save attachment metadata');
+  }
+
+  return (await completeRes.json()) as CSORecord;
 }
 
 /** POST /api/auth/login - admin login */
