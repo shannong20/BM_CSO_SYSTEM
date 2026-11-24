@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/client/context/AuthContext';
 import type { UserRole } from '@/client/lib/auth';
-import { ShieldCheck, User, ArrowRight, Eye, EyeOff, CheckCircle2 } from 'lucide-react';
+import { ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { BrandLogo } from '@/client/components/BrandLogo';
 
 export default function LoginPage() {
@@ -36,101 +36,86 @@ export default function LoginPage() {
     }
   };
 
-  const roles: { value: UserRole; label: string; description: string; icon: React.ElementType }[] = [
-    {
-      value: 'guest',
-      label: 'Browse Directory (Guest)',
-      description: 'Search and view accredited CSO records and certificates. No password needed.',
-      icon: User,
-    },
-    {
-      value: 'admin',
-      label: 'Administrator',
-      description: 'Register new CSOs, update accreditation records, and upload certificates.',
-      icon: ShieldCheck,
-    },
-  ];
-
   return (
-    <div className="min-h-screen w-full flex flex-col items-center justify-center p-4 sm:p-8 bg-[#F3F6F4]">
-      <div className="w-full max-w-md space-y-6 animate-fadeIn">
-        {/* Civic Header */}
-        <div className="text-center flex flex-col items-center space-y-2">
-          <div className="p-2.5 rounded-2xl bg-[#143C2C] shadow-sm">
-            <BrandLogo size={44} />
-          </div>
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#245b29] pt-1">
-            Province of La Union · Sangguniang Panlalawigan
-          </p>
-          <h1 className="text-2xl sm:text-3xl font-bold text-[#111827] tracking-tight">
-            Sign in to CSOTrack
-          </h1>
-          <p className="text-sm text-[#4B5563]">
-            Official SP Accredited CSO Registry (Term 2025–2028)
-          </p>
-        </div>
-
-        {/* High-contrast Form Card */}
+    <div
+      className="min-h-screen w-full flex flex-col items-center justify-center px-4 py-10 bg-[#143C2C]"
+      style={{
+        backgroundImage:
+          'radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px), linear-gradient(135deg, #0E2B1F 0%, #143C2C 50%, #1F573F 100%)',
+        backgroundSize: '24px 24px, 100% 100%',
+      }}
+    >
+      <div className="w-full max-w-lg space-y-5 animate-fadeIn">
+        {/* Centered Glassmorphism Login Card */}
         <form
           onSubmit={handleLogin}
-          className="rounded-2xl bg-white p-6 sm:p-8 border border-[#E5E7EB] shadow-sm space-y-5"
+          className="rounded-2xl bg-white/10 backdrop-blur-xl border border-white/20 p-8 sm:p-10 shadow-[0_16px_48px_rgba(0,0,0,0.35)] space-y-6"
         >
-          <fieldset className="space-y-3">
-            <legend className="text-sm font-semibold text-[#111827] mb-2">
-              Choose how you want to continue
-            </legend>
-            {roles.map((role) => {
-              const isSelected = selectedRole === role.value;
-              return (
-                <button
-                  key={role.value}
-                  type="button"
-                  onClick={() => {
-                    setSelectedRole(role.value);
-                    setError('');
-                  }}
-                  aria-pressed={isSelected}
-                  className={`w-full flex items-start gap-3.5 p-4 rounded-xl border-2 text-left transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#143C2C] ${
-                    isSelected
-                      ? 'border-[#143C2C] bg-[#F2F7F4]'
-                      : 'border-[#E5E7EB] bg-white hover:border-gray-300 hover:bg-gray-50'
-                  }`}
-                >
-                  <div
-                    className={`flex-shrink-0 flex items-center justify-center w-10 h-10 rounded-xl ${
-                      isSelected
-                        ? 'bg-[#143C2C] text-white'
-                        : 'bg-gray-100 text-[#374151]'
-                    }`}
-                  >
-                    <role.icon size={20} />
-                  </div>
+          {/* Card Header */}
+          <div className="flex flex-col items-center text-center space-y-2.5 pb-4 border-b border-white/15">
+            <BrandLogo size={48} />
+            <div className="space-y-1">
+              <h1 className="text-2xl font-bold text-white tracking-tight">
+                CSOTrack
+              </h1>
+              <p className="text-sm text-white/75">
+                SP Accredited CSO Registry · Term 2025–2028
+              </p>
+            </div>
+          </div>
 
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-[#111827] text-base leading-snug">
-                      {role.label}
-                    </p>
-                    <p className="text-sm mt-0.5 leading-relaxed text-[#4B5563]">
-                      {role.description}
-                    </p>
-                  </div>
+          {/* Segmented Role Switch */}
+          <div
+            role="tablist"
+            aria-label="Access type"
+            className="grid grid-cols-2 gap-1 p-1 rounded-xl bg-black/20 border border-white/10"
+          >
+            <button
+              type="button"
+              role="tab"
+              aria-selected={selectedRole === 'guest'}
+              onClick={() => {
+                setSelectedRole('guest');
+                setError('');
+              }}
+              className={`min-h-10 rounded-lg text-sm font-semibold transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-white ${
+                selectedRole === 'guest'
+                  ? 'bg-white text-[#143C2C] shadow-sm'
+                  : 'text-white/80 hover:text-white'
+              }`}
+            >
+              Public Guest
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={selectedRole === 'admin'}
+              onClick={() => {
+                setSelectedRole('admin');
+                setError('');
+              }}
+              className={`min-h-10 rounded-lg text-sm font-semibold transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-white ${
+                selectedRole === 'admin'
+                  ? 'bg-white text-[#143C2C] shadow-sm'
+                  : 'text-white/80 hover:text-white'
+              }`}
+            >
+              Administrator
+            </button>
+          </div>
 
-                  {isSelected && (
-                    <CheckCircle2 size={20} className="text-[#143C2C] shrink-0 mt-0.5" />
-                  )}
-                </button>
-              );
-            })}
-          </fieldset>
-
-          {selectedRole === 'admin' && (
-            <div className="space-y-4 pt-2 border-t border-gray-100">
+          {selectedRole === 'guest' ? (
+            <p className="text-sm text-white/80 leading-relaxed text-center py-2">
+              Browse and search accredited Civil Society Organizations across La Union. No account or password is required.
+            </p>
+          ) : (
+            <div className="space-y-4">
               <div>
                 <label
                   htmlFor="admin-username"
-                  className="mb-1.5 block text-sm font-semibold text-[#111827]"
+                  className="mb-1.5 block text-sm font-medium text-white/90"
                 >
-                  Admin Email / Username
+                  Email or username
                 </label>
                 <input
                   id="admin-username"
@@ -141,14 +126,14 @@ export default function LoginPage() {
                   value={username}
                   onChange={(event) => setUsername(event.target.value)}
                   placeholder="admin@launion.gov.ph"
-                  className="min-h-11 w-full rounded-xl px-3.5 text-base text-[#111827] bg-white border border-gray-300 placeholder:text-gray-400 outline-none transition-all focus:border-[#143C2C] focus:ring-2 focus:ring-[#143C2C]/20"
+                  className="min-h-11 w-full rounded-xl px-3.5 text-base text-white bg-white/10 border border-white/25 placeholder:text-white/45 outline-none transition-all focus:border-white/60 focus:ring-2 focus:ring-white/20"
                 />
               </div>
 
               <div>
                 <label
                   htmlFor="admin-password"
-                  className="mb-1.5 block text-sm font-semibold text-[#111827]"
+                  className="mb-1.5 block text-sm font-medium text-white/90"
                 >
                   Password
                 </label>
@@ -161,13 +146,13 @@ export default function LoginPage() {
                     required
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
-                    placeholder="Enter your password"
-                    className="min-h-11 w-full rounded-xl px-3.5 pr-12 text-base text-[#111827] bg-white border border-gray-300 placeholder:text-gray-400 outline-none transition-all focus:border-[#143C2C] focus:ring-2 focus:ring-[#143C2C]/20"
+                    placeholder="Enter password"
+                    className="min-h-11 w-full rounded-xl px-3.5 pr-11 text-base text-white bg-white/10 border border-white/25 placeholder:text-white/45 outline-none transition-all focus:border-white/60 focus:ring-2 focus:ring-white/20"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword((shown) => !shown)}
-                    className="absolute inset-y-0 right-0 inline-flex w-11 items-center justify-center text-gray-500 hover:text-gray-900 transition-colors"
+                    className="absolute inset-y-0 right-0 inline-flex w-11 items-center justify-center text-white/70 hover:text-white transition-colors"
                     aria-label={showPassword ? 'Hide password' : 'Show password'}
                   >
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -180,7 +165,7 @@ export default function LoginPage() {
           {error && (
             <p
               role="alert"
-              className="rounded-xl px-4 py-3 text-sm font-medium bg-red-50 border border-red-200 text-red-800"
+              className="rounded-xl px-3.5 py-2.5 text-sm font-medium bg-red-500/20 border border-red-300/40 text-red-100"
             >
               {error}
             </p>
@@ -189,23 +174,23 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="group w-full min-h-12 px-5 py-3 rounded-xl text-base font-semibold transition-all bg-[#143C2C] text-white hover:bg-[#1B4D39] active:scale-[0.99] shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#143C2C] disabled:opacity-50 disabled:cursor-not-allowed"
+            className="group w-full min-h-10 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all bg-white text-[#143C2C] hover:bg-gray-100 active:scale-[0.99] shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <span className="flex items-center justify-center gap-2">
               {isSubmitting ? (
-                <span className="inline-block w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                <span className="inline-block w-4 h-4 rounded-full border-2 border-[#143C2C]/30 border-t-[#143C2C] animate-spin" />
               ) : (
-                <ArrowRight size={18} className="transition-transform group-hover:translate-x-0.5" />
+                <ArrowRight size={16} className="transition-transform group-hover:translate-x-0.5" />
               )}
               <span>
-                {selectedRole === 'admin' ? 'Sign in as Administrator' : 'Continue to CSO Directory'}
+                {selectedRole === 'admin' ? 'Sign in' : 'Open CSO Directory'}
               </span>
             </span>
           </button>
         </form>
 
-        <p className="text-center text-xs text-[#6B7280]">
-          Provincial Government of La Union · SP Committee on Accreditation
+        <p className="text-center text-xs text-white/65">
+          Province of La Union · Sangguniang Panlalawigan
         </p>
       </div>
     </div>
