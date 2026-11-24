@@ -8,7 +8,7 @@ import {
   type User,
   type UserRole,
 } from '@/client/lib/auth';
-import { fetchAdminLogin } from '@/client/lib/api';
+import { fetchAdminLogin, fetchLogout } from '@/client/lib/api';
 import { useRouter } from 'next/navigation';
 
 interface AuthContextType {
@@ -31,9 +31,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
-    const currentUser = getCurrentUser();
-    setUser(currentUser);
-    setLoading(false);
+    let cancelled = false;
+    async function initAuth() {
+      const currentUser = getCurrentUser();
+      if (currentUser?.role === 'admin') {
+        try {
+          const res = await fetch('/api/auth/session', { cache: 'no-store' });
+          const data = (await res.json()) as { admin?: boolean };
+          if (!cancelled && !data.admin) {
+            authLogout();
+            setUser(null);
+            setLoading(false);
+            return;
+          }
+        } catch {
+          // Keep current state if session check fails due to transient network error
+        }
+      }
+      if (!cancelled) {
+        setUser(currentUser);
+        setLoading(false);
+      }
+    }
+    void initAuth();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const handleLogin = (role: UserRole) => {
@@ -54,6 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const handleLogout = () => {
+    void fetchLogout().catch(() => {});
     authLogout();
     setUser(null);
     router.push('/login');

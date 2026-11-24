@@ -10,36 +10,62 @@ export interface ValidationError {
   message: string;
 }
 
-export function validateCSORecordInput(data: unknown): { valid: true; data: CSORecordInput } | { valid: false; errors: ValidationError[] } {
-  if (!data || typeof data !== 'object') {
+const VALID_STATUSES: AccreditationStatus[] = ['Accredited', 'Pending'];
+
+function readOptionalString(
+  d: Record<string, unknown>,
+  field: keyof CSORecordInput,
+  errors: ValidationError[],
+  fallback = ''
+): string {
+  const value = d[field];
+  if (value === undefined || value === null) return fallback;
+  if (typeof value !== 'string') {
+    errors.push({ field, message: `${field} must be a string.` });
+    return fallback;
+  }
+  return value.trim();
+}
+
+export function validateCSORecordInput(
+  data: unknown
+): { valid: true; data: CSORecordInput } | { valid: false; errors: ValidationError[] } {
+  if (!data || typeof data !== 'object' || Array.isArray(data)) {
     return { valid: false, errors: [{ field: 'root', message: 'Invalid record data.' }] };
   }
 
   const d = data as Record<string, unknown>;
   const errors: ValidationError[] = [];
 
-  const requiredStringFields: (keyof CSORecordInput)[] = [
-    'organizationName', 'lguRepresented', 'sector', 'address',
-    'advocacy', 'representativeName', 'position', 'contactNumber',
-    'emailAddress', 'accreditingAgency', 'resolutionNo', 'dateAccredited',
-  ];
-
-  for (const field of requiredStringFields) {
-    const value = d[field];
-    if (typeof value !== 'string' || !value.trim()) {
-      errors.push({ field, message: `${field} is required.` });
-    }
+  const organizationName = readOptionalString(d, 'organizationName', errors);
+  if (!organizationName) {
+    errors.push({ field: 'organizationName', message: 'Organization name is required.' });
   }
 
-  const status = d['status'];
-  const validStatuses: AccreditationStatus[] = ['Accredited', 'Pending'];
-  if (typeof status !== 'string' || !validStatuses.includes(status as AccreditationStatus)) {
+  const lguRepresented = readOptionalString(d, 'lguRepresented', errors);
+  if (!lguRepresented) {
+    errors.push({ field: 'lguRepresented', message: 'LGU represented is required.' });
+  }
+
+  const sector = readOptionalString(d, 'sector', errors);
+  const address = readOptionalString(d, 'address', errors);
+  const advocacy = readOptionalString(d, 'advocacy', errors);
+  const representativeName = readOptionalString(d, 'representativeName', errors);
+  const position = readOptionalString(d, 'position', errors);
+  const contactNumber = readOptionalString(d, 'contactNumber', errors);
+  const emailAddress = readOptionalString(d, 'emailAddress', errors);
+  const accreditingAgency = readOptionalString(d, 'accreditingAgency', errors, 'DOLE');
+  const resolutionNo = readOptionalString(d, 'resolutionNo', errors);
+  const dateAccredited = readOptionalString(d, 'dateAccredited', errors);
+
+  const rawStatus = d['status'] ?? 'Accredited';
+  if (typeof rawStatus !== 'string' || !VALID_STATUSES.includes(rawStatus as AccreditationStatus)) {
     errors.push({ field: 'status', message: 'Invalid accreditation status.' });
   }
 
-  const isWomenLed = d['isWomenLed'];
-  if (typeof isWomenLed !== 'boolean') {
-    errors.push({ field: 'isWomenLed', message: 'isWomenLed must be a boolean.' });
+  const rawWomenLed = d['isWomenLed'] === undefined ? false : d['isWomenLed'];
+  if (rawWomenLed !== null && typeof rawWomenLed !== 'boolean') {
+    errors.push({ field: 'isWomenLed', message: 'isWomenLed must be a boolean or null.' });
   }
 
   if (errors.length > 0) {
@@ -49,20 +75,20 @@ export function validateCSORecordInput(data: unknown): { valid: true; data: CSOR
   return {
     valid: true,
     data: {
-      organizationName: d.organizationName as string,
-      lguRepresented: d.lguRepresented as string,
-      sector: d.sector as string,
-      address: d.address as string,
-      advocacy: d.advocacy as string,
-      isWomenLed: d.isWomenLed as boolean,
-      representativeName: d.representativeName as string,
-      position: d.position as string,
-      contactNumber: d.contactNumber as string,
-      emailAddress: d.emailAddress as string,
-      accreditingAgency: d.accreditingAgency as string,
-      resolutionNo: d.resolutionNo as string,
-      dateAccredited: d.dateAccredited as string,
-      status: status as AccreditationStatus,
+      organizationName,
+      lguRepresented,
+      sector,
+      address,
+      advocacy,
+      isWomenLed: rawWomenLed as boolean | null,
+      representativeName,
+      position,
+      contactNumber,
+      emailAddress,
+      accreditingAgency,
+      resolutionNo,
+      dateAccredited,
+      status: rawStatus as AccreditationStatus,
     },
   };
 }

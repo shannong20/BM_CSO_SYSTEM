@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useRef } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Check,
@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { CSORecord, UNSPECIFIED_VALUE, valueOrUnspecified } from '@/client/types';
 import { StatusBadge } from '@/client/components/StatusBadge';
+import { useModalAccessibility } from '@/client/lib/useModalAccessibility';
 
 interface RecordDetailsModalProps {
   record: CSORecord | null;
@@ -52,19 +53,14 @@ export const RecordDetailsModal: React.FC<RecordDetailsModalProps> = ({
   attachmentRemoveError,
 }) => {
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!record) return;
-    closeButtonRef.current?.focus();
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [record, onClose]);
+  useModalAccessibility({
+    isOpen: Boolean(record),
+    onClose,
+    containerRef: dialogRef,
+    initialFocusRef: closeButtonRef,
+  });
 
   if (!record || typeof document === 'undefined') return null;
 
@@ -78,7 +74,10 @@ export const RecordDetailsModal: React.FC<RecordDetailsModalProps> = ({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[92vh] overflow-y-auto p-5 border border-[#E5E7EB] shadow-[0_4px_12px_rgba(0,0,0,0.08)] relative animate-fadeIn">
+      <div
+        ref={dialogRef}
+        className="bg-white rounded-2xl max-w-2xl w-full max-h-[92vh] overflow-y-auto p-5 border border-[#E5E7EB] shadow-[0_4px_12px_rgba(0,0,0,0.08)] relative animate-fadeIn"
+      >
         <button
           ref={closeButtonRef}
           type="button"

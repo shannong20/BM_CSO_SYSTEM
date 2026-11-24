@@ -78,6 +78,30 @@ export function createCloudinarySignedUpload(recordId: string): SignedUploadPayl
 }
 
 /**
+ * Verify that completed attachment metadata points to this server's Cloudinary account
+ * and the expected certificate folder (blocks arbitrary/javascript: URL injection).
+ */
+export function isValidCloudinaryAttachment(storagePath: string, url: string): boolean {
+  const { cloudName } = getCloudinaryConfig();
+  if (!cloudName || !storagePath || !url) return false;
+
+  if (!storagePath.startsWith('cso_certificates/') || storagePath.includes('..')) {
+    return false;
+  }
+
+  try {
+    const parsed = new URL(url);
+    return (
+      parsed.protocol === 'https:' &&
+      parsed.hostname === 'res.cloudinary.com' &&
+      parsed.pathname.startsWith(`/${cloudName}/`)
+    );
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Delete an uploaded attachment from Cloudinary by public_id.
  */
 export async function deleteFromCloudinary(
