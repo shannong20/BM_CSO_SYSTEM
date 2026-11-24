@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { AlertTriangle, X as CloseIcon } from 'lucide-react';
+import { useModalAccessibility } from '@/client/lib/useModalAccessibility';
 
 interface ConfirmDialogProps {
   isOpen: boolean;
@@ -26,19 +27,15 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   onCancel,
 }) => {
   const cancelButtonRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!isOpen) return;
-    cancelButtonRef.current?.focus();
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !isLoading) {
-        onCancel();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, isLoading, onCancel]);
+  useModalAccessibility({
+    isOpen,
+    onClose: onCancel,
+    containerRef: dialogRef,
+    initialFocusRef: cancelButtonRef,
+    canClose: !isLoading,
+  });
 
   if (!isOpen || typeof document === 'undefined') return null;
 
@@ -49,8 +46,14 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
       aria-modal="true"
       aria-labelledby="confirm-dialog-title"
       aria-describedby="confirm-dialog-desc"
+      onClick={(e) => {
+        if (e.target === e.currentTarget && !isLoading) onCancel();
+      }}
     >
-      <div className="relative w-full max-w-md rounded-2xl border border-[#E5E7EB] bg-white p-6 shadow-xl animate-fadeIn">
+      <div
+        ref={dialogRef}
+        className="relative w-full max-w-md rounded-2xl border border-[#E5E7EB] bg-white p-6 shadow-xl animate-fadeIn"
+      >
         <button
           type="button"
           onClick={onCancel}

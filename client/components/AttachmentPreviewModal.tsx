@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { X as CloseIcon } from 'lucide-react';
 import { CSORecord } from '@/client/types';
+import { useModalAccessibility } from '@/client/lib/useModalAccessibility';
 
 interface AttachmentPreviewModalProps {
   viewingAttachment: { record: CSORecord; url: string } | null;
@@ -15,19 +16,14 @@ export const AttachmentPreviewModal: React.FC<AttachmentPreviewModalProps> = ({
   onClose,
 }) => {
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!viewingAttachment) return;
-    closeButtonRef.current?.focus();
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [viewingAttachment, onClose]);
+  useModalAccessibility({
+    isOpen: Boolean(viewingAttachment),
+    onClose,
+    containerRef: dialogRef,
+    initialFocusRef: closeButtonRef,
+  });
 
   if (!viewingAttachment || typeof document === 'undefined') return null;
 
@@ -43,7 +39,10 @@ export const AttachmentPreviewModal: React.FC<AttachmentPreviewModalProps> = ({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="flex h-[min(90vh,900px)] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+      <div
+        ref={dialogRef}
+        className="flex h-[min(90vh,900px)] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
+      >
         <div className="flex items-center justify-between border-b border-gray-200 px-5 py-3">
           <h2 id="attachment-preview-title" className="truncate pr-4 text-sm font-semibold text-gray-900">
             {title}
