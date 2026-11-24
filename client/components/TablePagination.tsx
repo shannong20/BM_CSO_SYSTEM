@@ -77,10 +77,10 @@ export const TablePagination: React.FC<TablePaginationProps> = ({
           onClick={() => onPageChange(Math.max(1, safePage - 1))}
           disabled={safePage <= 1}
           aria-label="Previous page"
-          className="inline-flex min-h-9 items-center gap-1 rounded-lg border border-gray-200 px-2.5 py-1.5 font-medium text-gray-700 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#245b29] disabled:cursor-not-allowed disabled:opacity-45"
+          className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 font-semibold text-gray-700 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#245b29] disabled:cursor-not-allowed disabled:opacity-45"
         >
-          <ChevronLeft size={15} />
-          <span className="hidden sm:inline">Prev</span>
+          <ChevronLeft size={16} />
+          <span>Previous</span>
         </button>
 
         {getPageNumbers().map((item, idx) =>
@@ -94,10 +94,10 @@ export const TablePagination: React.FC<TablePaginationProps> = ({
               type="button"
               onClick={() => onPageChange(item)}
               aria-current={item === safePage ? 'page' : undefined}
-              className={`min-h-9 min-w-9 rounded-lg px-2.5 py-1.5 font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#245b29] ${
+              className={`min-h-10 min-w-10 rounded-lg px-2.5 py-1.5 font-semibold tabular-nums transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#245b29] ${
                 item === safePage
-                  ? 'bg-[#27632A] text-white shadow-sm'
-                  : 'border border-gray-200 text-gray-700 hover:bg-gray-50'
+                  ? 'bg-[#143C2C] text-white shadow-sm'
+                  : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
               }`}
             >
               {item}
@@ -110,10 +110,10 @@ export const TablePagination: React.FC<TablePaginationProps> = ({
           onClick={() => onPageChange(Math.min(totalPages, safePage + 1))}
           disabled={safePage >= totalPages}
           aria-label="Next page"
-          className="inline-flex min-h-9 items-center gap-1 rounded-lg border border-gray-200 px-2.5 py-1.5 font-medium text-gray-700 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#245b29] disabled:cursor-not-allowed disabled:opacity-45"
+          className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 font-semibold text-gray-700 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#245b29] disabled:cursor-not-allowed disabled:opacity-45"
         >
-          <span className="hidden sm:inline">Next</span>
-          <ChevronRight size={15} />
+          <span>Next</span>
+          <ChevronRight size={16} />
         </button>
       </div>
     </nav>

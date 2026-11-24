@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { CSORecord } from '@/client/types';
 
 interface SectorChartProps {
@@ -34,13 +35,13 @@ export const SectorChart: React.FC<SectorChartProps> = ({ records }) => {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       {/* Sector Distribution Card */}
-      <div className="lg:col-span-2 bg-white rounded-2xl p-6 shadow-sm">
+      <div className="lg:col-span-2 bg-white rounded-2xl p-6 border border-[#E5E7EB] shadow-sm">
         <div className="flex items-center justify-between mb-5">
           <div>
-            <h2 className="text-base font-bold text-gray-900">Sector Distribution</h2>
+            <h2 className="text-base font-bold text-[#111827] tracking-tight">Sector Distribution</h2>
             <p className="text-sm text-[#374151]">Breakdown of registered CSOs by category across La Union</p>
           </div>
-          <span className="inline-flex min-h-10 items-center text-sm font-semibold px-3 rounded-lg bg-emerald-50 text-emerald-900">
+          <span className="inline-flex min-h-9 items-center text-xs font-semibold px-3 rounded-full bg-emerald-50 text-emerald-900 tabular-nums">
             {sortedSectors.length} Sectors Active
           </span>
         </div>
@@ -54,21 +55,27 @@ export const SectorChart: React.FC<SectorChartProps> = ({ records }) => {
             displayedSectors.map(([sector, count]) => {
               const percentage = Math.round((count / total) * 100);
               return (
-                <div key={sector} className="space-y-1.5">
+                <Link
+                  key={sector}
+                  href={`/directory?sector=${encodeURIComponent(sector)}`}
+                  className="group block rounded-lg p-1.5 -m-1.5 hover:bg-emerald-50/60 active:scale-[0.99] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#245b29] transition-all space-y-1.5"
+                >
                   <div className="flex justify-between items-center text-sm">
-                    <span className="font-semibold text-[#374151]">{sector}</span>
-                    <div className="flex items-center gap-2">
+                    <span className="font-semibold text-[#374151] group-hover:text-[#143C2C] transition-colors">
+                      {sector}
+                    </span>
+                    <div className="flex items-center gap-2 tabular-nums">
                       <span className="font-bold text-gray-900">{count} org{count > 1 ? 's' : ''}</span>
                       <span className="text-[#374151]">({percentage}%)</span>
                     </div>
                   </div>
                   <div className="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-gradient-to-r from-[#4E8D42] to-[#6EB160] rounded-full transition-all duration-500 ease-out"
+                      className="h-full bg-gradient-to-r from-[#2E7D32] to-[#549448] rounded-full transition-all duration-500 ease-out"
                       style={{ width: `${(count / maxCount) * 100}%` }}
                     />
                   </div>
-                </div>
+                </Link>
               );
             })
           )}
@@ -90,14 +97,17 @@ export const SectorChart: React.FC<SectorChartProps> = ({ records }) => {
       </div>
 
       {/* Accreditation Status Breakdown */}
-      <div className="bg-white rounded-2xl p-6 shadow-sm flex flex-col justify-between">
+      <div className="bg-white rounded-2xl p-6 border border-[#E5E7EB] shadow-sm flex flex-col justify-between">
         <div>
-          <h2 className="text-base font-bold text-gray-900 mb-1">Accreditation Status</h2>
+          <h2 className="text-base font-bold text-[#111827] tracking-tight mb-1">Accreditation Status</h2>
           <p className="text-sm text-[#374151] mb-6">Current validity breakdown (Term 2025–2028)</p>
 
           <div className="space-y-4">
             {/* Accredited */}
-            <div className="min-h-16 p-4 rounded-xl bg-[#F0FDF4] flex items-center justify-between">
+            <Link
+              href="/directory?status=Accredited"
+              className="min-h-16 p-4 rounded-xl bg-[#F0FDF4] hover:bg-emerald-100/70 active:scale-[0.99] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#245b29] transition-all flex items-center justify-between"
+            >
               <div className="flex items-center gap-3">
                 <span className="w-3 h-3 rounded-full bg-[#2E7D32]"></span>
                 <div>
@@ -105,16 +115,19 @@ export const SectorChart: React.FC<SectorChartProps> = ({ records }) => {
                   <p className="text-sm text-[#245b29] font-medium">Valid SP Resolution</p>
                 </div>
               </div>
-              <div className="text-right">
-                <span className="text-base font-extrabold text-[#2E7D32]">{accreditedCount}</span>
+              <div className="text-right tabular-nums">
+                <span className="text-base font-bold text-[#2E7D32]">{accreditedCount}</span>
                 <span className="text-sm text-[#374151] block">
                   {Math.round((accreditedCount / total) * 100)}%
                 </span>
               </div>
-            </div>
+            </Link>
 
             {/* Pending */}
-            <div className="min-h-16 p-4 rounded-xl bg-[#FFFBEB] flex items-center justify-between">
+            <Link
+              href="/directory?status=Pending"
+              className="min-h-16 p-4 rounded-xl bg-[#FFFBEB] hover:bg-amber-100/70 active:scale-[0.99] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#8A3D00] transition-all flex items-center justify-between"
+            >
               <div className="flex items-center gap-3">
                 <span className="w-3 h-3 rounded-full bg-[#8A3D00]"></span>
                 <div>
@@ -122,16 +135,19 @@ export const SectorChart: React.FC<SectorChartProps> = ({ records }) => {
                   <p className="text-sm text-[#8A3D00] font-medium">Secretariat verification</p>
                 </div>
               </div>
-              <div className="text-right">
-                <span className="text-base font-extrabold text-[#8A3D00]">{pendingCount}</span>
+              <div className="text-right tabular-nums">
+                <span className="text-base font-bold text-[#8A3D00]">{pendingCount}</span>
                 <span className="text-sm text-[#374151] block">
                   {Math.round((pendingCount / total) * 100)}%
                 </span>
               </div>
-            </div>
+            </Link>
 
             {/* Expired */}
-            <div className="min-h-16 p-4 rounded-xl bg-[#FEF2F2] flex items-center justify-between">
+            <Link
+              href="/directory?status=Expired"
+              className="min-h-16 p-4 rounded-xl bg-[#FEF2F2] hover:bg-red-100/70 active:scale-[0.99] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#B42318] transition-all flex items-center justify-between"
+            >
               <div className="flex items-center gap-3">
                 <span className="w-3 h-3 rounded-full bg-[#B42318]"></span>
                 <div>
@@ -139,13 +155,13 @@ export const SectorChart: React.FC<SectorChartProps> = ({ records }) => {
                   <p className="text-sm text-[#B42318] font-medium">Requires renewal</p>
                 </div>
               </div>
-              <div className="text-right">
-                <span className="text-base font-extrabold text-[#B42318]">{expiredCount}</span>
+              <div className="text-right tabular-nums">
+                <span className="text-base font-bold text-[#B42318]">{expiredCount}</span>
                 <span className="text-sm text-[#374151] block">
                   {Math.round((expiredCount / total) * 100)}%
                 </span>
               </div>
-            </div>
+            </Link>
           </div>
         </div>
 

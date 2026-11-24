@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useAuth } from '@/client/context/AuthContext';
 import {
   CSORecord,
@@ -22,7 +22,13 @@ import {
   ArchiveRestore,
   Pencil,
   Trash2,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
 } from 'lucide-react';
+
+type SortField = 'organizationName' | 'lguRepresented' | 'status' | 'dateAccredited';
+type SortDirection = 'asc' | 'desc';
 
 interface CSOTableProps {
   records: CSORecord[];
@@ -71,6 +77,8 @@ export const CSOTable: React.FC<CSOTableProps> = ({
   const [uploadingAttachmentRecordId, setUploadingAttachmentRecordId] = useState<string | null>(null);
   const [pendingAttachmentRecord, setPendingAttachmentRecord] = useState<CSORecord | null>(null);
   const [attachmentUploadError, setAttachmentUploadError] = useState<{ recordId: string; message: string } | null>(null);
+  const [sortField, setSortField] = useState<SortField | null>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const attachmentFileInputRef = useRef<HTMLInputElement>(null);
 
   const currentPage = controlledPage ?? internalPage;
@@ -95,12 +103,48 @@ export const CSOTable: React.FC<CSOTableProps> = ({
     });
   }, [records]);
 
-  const totalPages = enablePagination ? Math.max(1, Math.ceil(records.length / pageSize)) : 1;
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      if (sortDirection === 'asc') {
+        setSortDirection('desc');
+      } else {
+        setSortField(null);
+      }
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+    setCurrentPage(1);
+  };
+
+  const sortedRecords = useMemo(() => {
+    if (!sortField) return records;
+    const copy = [...records];
+    copy.sort((a, b) => {
+      const aVal = (a[sortField] ?? '').toString().toLowerCase();
+      const bVal = (b[sortField] ?? '').toString().toLowerCase();
+      const cmp = aVal.localeCompare(bVal);
+      return sortDirection === 'asc' ? cmp : -cmp;
+    });
+    return copy;
+  }, [records, sortField, sortDirection]);
+
+  const totalPages = enablePagination ? Math.max(1, Math.ceil(sortedRecords.length / pageSize)) : 1;
   const safePage = Math.min(Math.max(1, currentPage), totalPages);
   const startIndex = enablePagination ? (safePage - 1) * pageSize : 0;
   const displayedRecords = enablePagination
-    ? records.slice(startIndex, startIndex + pageSize)
-    : records;
+    ? sortedRecords.slice(startIndex, startIndex + pageSize)
+    : sortedRecords;
+
+  const renderSortIcon = (field: SortField) => {
+    if (sortField !== field) return <ArrowUpDown size={13} className="opacity-70" />;
+    return sortDirection === 'asc' ? <ArrowUp size={13} /> : <ArrowDown size={13} />;
+  };
+
+  const getAriaSort = (field: SortField): 'ascending' | 'descending' | 'none' => {
+    if (sortField !== field) return 'none';
+    return sortDirection === 'asc' ? 'ascending' : 'descending';
+  };
 
   const handleViewAttachment = async (record: CSORecord) => {
     setOpeningAttachmentRecordId(record.id);
@@ -185,12 +229,109 @@ export const CSOTable: React.FC<CSOTableProps> = ({
 
   return (
     <>
-      <div className="w-full min-w-0 rounded-2xl bg-gray-100 p-2.5 space-y-2.5">
+      <div className="w-full min-w-0 rounded-2xl bg-[#F3F4F6] border border-[#E5E7EB] p-3 space-y-2.5">
+        <p className="hidden md:block text-xs font-medium text-[#4B5563] px-1">
+          Tip: Click any row to open full organization details, representative contacts, and attachments. Scroll right for resolution and date fields.
+        </p>
+        {/* Mobile card list */}
+        <div className="md:hidden space-y-2.5">
+          {displayedRecords.length === 0 ? (
+            <div className="rounded-xl bg-white p-8 text-center text-[#374151]">
+              <p className="text-sm font-medium">
+                No {showingArchived ? 'archived ' : ''}CSO records found matching your filters.
+              </p>
+              <p className="text-sm mt-1">Try clearing your search query or filters.</p>
+            </div>
+          ) : (
+            displayedRecords.map((record, index) => (
+              <article
+                key={record.id || index}
+                onClick={() => setSelectedRecord(record)}
+                className="rounded-xl bg-white p-4 border border-[#E5E7EB] shadow-sm space-y-3 active:scale-[0.99] transition-transform cursor-pointer"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-xs font-mono text-gray-500 tabular-nums">
+                      #{record.no ?? startIndex + index + 1} · {displayValue(record.lguRepresented)}
+                    </p>
+                    <h3 className="text-base font-bold text-gray-900 leading-snug mt-0.5">
+                      {displayValue(record.organizationName)}
+                    </h3>
+                  </div>
+                  {record.status === 'Unknown' ? (
+                    <span className="text-xs text-gray-500 shrink-0">{UNSPECIFIED_VALUE}</span>
+                  ) : (
+                    <StatusBadge status={record.status} />
+                  )}
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 text-xs text-[#374151]">
+                  {record.sector && (
+                    <span className="px-2.5 py-1 rounded-md bg-gray-100 font-medium">
+                      {record.sector}
+                    </span>
+                  )}
+                  {record.representativeName && (
+                    <span className="truncate">Rep: {record.representativeName}</span>
+                  )}
+                </div>
+
+                <div
+                  className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-gray-100"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setSelectedRecord(record)}
+                    className="inline-flex min-h-10 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold text-[#245b29] bg-emerald-50 hover:bg-emerald-100"
+                  >
+                    <Eye size={14} />
+                    <span>Details</span>
+                  </button>
+                  {isAdmin && onEdit && (
+                    <button
+                      type="button"
+                      onClick={() => onEdit(record)}
+                      className="inline-flex min-h-10 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold text-[#374151] bg-gray-100 hover:bg-gray-200"
+                    >
+                      <Pencil size={14} />
+                      <span>Edit</span>
+                    </button>
+                  )}
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      onClick={() => handleArchive(record)}
+                      disabled={archivingRecordId !== null || deletingRecordId !== null}
+                      className="inline-flex min-h-10 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold text-amber-800 bg-amber-50 hover:bg-amber-100 disabled:opacity-60"
+                    >
+                      {record.archived ? <ArchiveRestore size={14} /> : <Archive size={14} />}
+                      <span>{record.archived ? 'Restore' : 'Archive'}</span>
+                    </button>
+                  )}
+                  {record.certificateAttachment && (
+                    <button
+                      type="button"
+                      onClick={() => handleViewAttachment(record)}
+                      disabled={openingAttachmentRecordId !== null}
+                      className="inline-flex min-h-10 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold text-[#374151] bg-gray-100 hover:bg-gray-200 disabled:opacity-60"
+                    >
+                      <Paperclip size={14} />
+                      <span>Attachment</span>
+                    </button>
+                  )}
+                </div>
+              </article>
+            ))
+          )}
+        </div>
+
+        {/* Desktop 16-column table */}
         <div
           className={
             enablePagination
-              ? 'rounded-xl bg-white overflow-x-auto'
-              : 'rounded-xl bg-white overflow-auto overscroll-contain'
+              ? 'hidden md:block rounded-xl bg-white overflow-x-auto'
+              : 'hidden md:block rounded-xl bg-white overflow-auto overscroll-contain'
           }
           style={
             enablePagination
@@ -202,14 +343,44 @@ export const CSOTable: React.FC<CSOTableProps> = ({
             <thead className="sticky top-0 z-10">
               <tr className="bg-[#27632A] text-white font-bold tracking-wide uppercase text-sm">
                 <th className="py-2.5 px-3 border-r border-white/20 text-center w-12">NO.</th>
-                <th className="py-2.5 px-4 border-r border-white/20">SP ACCREDITED</th>
+                <th aria-sort={getAriaSort('status')} className="py-2.5 px-4 border-r border-white/20">
+                  <button
+                    type="button"
+                    onClick={() => handleSort('status')}
+                    className="inline-flex items-center gap-1.5 uppercase font-bold tracking-wide hover:text-emerald-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white rounded"
+                  >
+                    <span>SP ACCREDITED</span>
+                    {renderSortIcon('status')}
+                  </button>
+                </th>
                 <th className="py-2.5 px-4 border-r border-white/20 min-w-[240px]">ADVOCACY</th>
                 <th className="py-2.5 px-3 border-r border-white/20">SECTOR</th>
-                <th className="py-2.5 px-4 border-r border-white/20 min-w-[220px]">NAME OF ORGANIZATION</th>
+                <th
+                  aria-sort={getAriaSort('organizationName')}
+                  className="sticky left-0 z-20 bg-[#27632A] py-2.5 px-4 border-r border-white/20 min-w-[220px] shadow-[6px_0_12px_-6px_rgba(0,0,0,0.2)]"
+                >
+                  <button
+                    type="button"
+                    onClick={() => handleSort('organizationName')}
+                    className="inline-flex items-center gap-1.5 uppercase font-bold tracking-wide hover:text-emerald-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white rounded"
+                  >
+                    <span>NAME OF ORGANIZATION</span>
+                    {renderSortIcon('organizationName')}
+                  </button>
+                </th>
                 <th className="py-2.5 px-4 border-r border-white/20">NAME OF REPRESENTATIVE</th>
                 <th className="py-2.5 px-3 border-r border-white/20">POSITION</th>
                 <th className="py-2.5 px-4 border-r border-white/20 min-w-[200px]">ADDRESS</th>
-                <th className="py-2.5 px-3 border-r border-white/20">LGU REPRESENTED</th>
+                <th aria-sort={getAriaSort('lguRepresented')} className="py-2.5 px-3 border-r border-white/20">
+                  <button
+                    type="button"
+                    onClick={() => handleSort('lguRepresented')}
+                    className="inline-flex items-center gap-1.5 uppercase font-bold tracking-wide hover:text-emerald-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white rounded"
+                  >
+                    <span>LGU REPRESENTED</span>
+                    {renderSortIcon('lguRepresented')}
+                  </button>
+                </th>
                 <th className="py-2.5 px-3 border-r border-white/20">CONTACT NUMBER</th>
                 <th className="py-2.5 px-4 border-r border-white/20">EMAIL ADDRESS</th>
                 <th className="py-2.5 px-3 border-r border-white/20 text-center">
@@ -219,7 +390,16 @@ export const CSOTable: React.FC<CSOTableProps> = ({
                   CHECK IF CSO<br />IS LED WOMEN
                 </th>
                 <th className="py-2.5 px-3 border-r border-white/20">RESOLUTION NO.</th>
-                <th className="py-2.5 px-3 border-r border-white/20">DATE ACCREDITED</th>
+                <th aria-sort={getAriaSort('dateAccredited')} className="py-2.5 px-3 border-r border-white/20">
+                  <button
+                    type="button"
+                    onClick={() => handleSort('dateAccredited')}
+                    className="inline-flex items-center gap-1.5 uppercase font-bold tracking-wide hover:text-emerald-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white rounded"
+                  >
+                    <span>DATE ACCREDITED</span>
+                    {renderSortIcon('dateAccredited')}
+                  </button>
+                </th>
                 <th className="sticky right-0 z-20 bg-[#27632A] py-2.5 px-3 text-center min-w-[190px] shadow-[-6px_0_12px_-6px_rgba(0,0,0,0.2)]">
                   ACTION
                 </th>
@@ -248,7 +428,7 @@ export const CSOTable: React.FC<CSOTableProps> = ({
                     }}
                     className="hover:bg-emerald-50/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-[#245b29] transition-colors group cursor-pointer"
                   >
-                    <td className="py-3 px-3 text-center font-medium text-[#374151]">
+                    <td className="py-3 px-3 text-center font-medium text-[#374151] tabular-nums">
                       {record.no ?? startIndex + index + 1}
                     </td>
                     <td className="py-3 px-4">
@@ -266,7 +446,7 @@ export const CSOTable: React.FC<CSOTableProps> = ({
                         {displayValue(record.sector)}
                       </span>
                     </td>
-                    <td className="py-3 px-4 font-semibold text-gray-900 group-hover:text-[#2E7D32] transition-colors">
+                    <td className="sticky left-0 z-10 bg-white group-hover:bg-emerald-50/95 py-3 px-4 font-semibold text-gray-900 group-hover:text-[#2E7D32] shadow-[6px_0_12px_-6px_rgba(0,0,0,0.08)] transition-colors">
                       {displayValue(record.organizationName)}
                     </td>
                     <td className="py-3 px-4 text-gray-800 font-medium">
@@ -281,7 +461,7 @@ export const CSOTable: React.FC<CSOTableProps> = ({
                     <td className="py-3 px-3 font-medium text-gray-800">
                       {displayValue(record.lguRepresented)}
                     </td>
-                    <td className="py-3 px-3 font-mono text-sm text-[#374151]">
+                    <td className="py-3 px-3 font-mono text-sm text-[#374151] tabular-nums">
                       {displayValue(record.contactNumber)}
                     </td>
                     <td className="py-3 px-4 text-[#374151] truncate max-w-[180px]">
@@ -312,10 +492,10 @@ export const CSOTable: React.FC<CSOTableProps> = ({
                         <span className="text-gray-500 italic text-sm">{UNSPECIFIED_VALUE}</span>
                       )}
                     </td>
-                    <td className="py-3 px-3 font-mono text-sm text-[#374151]">
+                    <td className="py-3 px-3 font-mono text-sm text-[#374151] tabular-nums">
                       {displayValue(record.resolutionNo)}
                     </td>
-                    <td className="py-3 px-3 text-[#374151] font-mono text-sm">
+                    <td className="py-3 px-3 text-[#374151] font-mono text-sm tabular-nums">
                       {displayValue(record.dateAccredited)}
                     </td>
                     <td
