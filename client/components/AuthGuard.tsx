@@ -5,11 +5,35 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/client/context/AuthContext';
 import { Sidebar } from '@/client/components/Sidebar';
 
+const SIDEBAR_COLLAPSE_KEY = 'csotrack_sidebar_collapsed';
+
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isAdmin, loading } = useAuth();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
+
+  useEffect(() => {
+    try {
+      if (localStorage.getItem(SIDEBAR_COLLAPSE_KEY) === '1') {
+        setSidebarCollapsed(true);
+      }
+    } catch {
+      // Ignore storage access errors
+    }
+  }, []);
+
+  const handleToggleSidebar = () => {
+    setSidebarCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(SIDEBAR_COLLAPSE_KEY, next ? '1' : '0');
+      } catch {
+        // Ignore storage access errors
+      }
+      return next;
+    });
+  };
 
   useEffect(() => {
     if (loading) return;
@@ -51,7 +75,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     <>
       <Sidebar
         collapsed={sidebarCollapsed}
-        onToggleCollapse={() => setSidebarCollapsed((prev) => !prev)}
+        onToggleCollapse={handleToggleSidebar}
       />
       <div
         className={`flex min-w-0 flex-1 flex-col pt-14 lg:pt-0 min-h-screen overflow-hidden transition-[padding] duration-300 ease-in-out ${

@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -12,9 +13,12 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
+  ShieldCheck,
+  User as UserIcon,
 } from 'lucide-react';
 import { useAuth } from '@/client/context/AuthContext';
 import { BrandLogo } from '@/client/components/BrandLogo';
+import { useModalAccessibility } from '@/client/lib/useModalAccessibility';
 
 interface NavItem {
   name: string;
@@ -35,16 +39,30 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { logout } = useAuth();
+  const [isHelpOpen, setIsHelpOpen] = useState(false);
+  const helpDialogRef = useRef<HTMLDivElement>(null);
+  const helpCloseRef = useRef<HTMLButtonElement>(null);
+  const { isAdmin, logout } = useAuth();
+
+  useModalAccessibility({
+    isOpen: isHelpOpen,
+    onClose: () => setIsHelpOpen(false),
+    containerRef: helpDialogRef,
+    initialFocusRef: helpCloseRef,
+  });
 
   const navItems: NavItem[] = [
-    {
-      name: 'Dashboard',
-      href: '/',
-      icon: LayoutDashboard,
-      active: pathname === '/',
-      soon: false,
-    },
+    ...(isAdmin
+      ? [
+          {
+            name: 'Dashboard',
+            href: '/',
+            icon: LayoutDashboard,
+            active: pathname === '/',
+            soon: false,
+          },
+        ]
+      : []),
     {
       name: 'CSO Directory',
       href: '/directory',
@@ -53,6 +71,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       soon: false,
     },
   ];
+
   return (
     <>
       {/* Mobile top bar */}
@@ -164,26 +183,51 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
           {/* Help Box */}
           <div className="mt-auto pt-6">
-            <div className={`${collapsed ? 'lg:hidden' : ''} p-4 rounded-xl bg-[#1A4735] text-white relative overflow-hidden`}>
-              <div className="flex items-center gap-2 mb-1.5">
-                <div className="w-6 h-6 rounded-full bg-[#245C45] flex items-center justify-center text-emerald-300">
+            <button
+              type="button"
+              onClick={() => setIsHelpOpen(true)}
+              title="Open data guide"
+              className={`w-full text-left rounded-xl bg-[#1A4735] hover:bg-[#215741] text-white transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${
+                collapsed ? 'lg:flex lg:items-center lg:justify-center lg:p-2.5 p-4' : 'p-4'
+              }`}
+            >
+              <div className={`flex items-center gap-2 ${collapsed ? 'lg:gap-0' : 'mb-1.5'}`}>
+                <div className="w-6 h-6 rounded-full bg-[#245C45] flex items-center justify-center text-emerald-300 shrink-0">
                   <HelpCircle size={14} />
                 </div>
-                <p className="text-sm font-semibold text-white">Need help?</p>
+                <p className={`text-sm font-semibold text-white ${collapsed ? 'lg:hidden' : ''}`}>
+                  Need help?
+                </p>
               </div>
-              <p className="text-sm leading-relaxed text-[#D1E7DD]">
-                Review the data guide for registration and accreditation.
+              <p className={`text-sm leading-relaxed text-[#D1E7DD] ${collapsed ? 'lg:hidden' : ''}`}>
+                Open the data guide for registration and accreditation.
               </p>
-            </div>
+            </button>
 
-            {/* User Info & Logout */}
-            <div className="mt-4 pt-4 border-t border-[#1E523D]">
+            {/* User Role & Logout */}
+            <div className="mt-4 pt-4 border-t border-[#1E523D] space-y-2">
+              <div
+                className={`flex items-center gap-2.5 px-3 py-1.5 rounded-lg bg-[#0E2B1F]/60 text-xs font-medium text-[#D1E7DD] ${
+                  collapsed ? 'lg:justify-center lg:px-2' : ''
+                }`}
+                title={isAdmin ? 'Signed in as Administrator' : 'Signed in as Guest (View-only)'}
+              >
+                {isAdmin ? (
+                  <ShieldCheck size={15} className="text-emerald-300 shrink-0" />
+                ) : (
+                  <UserIcon size={15} className="text-[#B0D1C2] shrink-0" />
+                )}
+                <span className={`truncate ${collapsed ? 'lg:hidden' : ''}`}>
+                  {isAdmin ? 'Administrator' : 'Guest (View-only)'}
+                </span>
+              </div>
+
               <button
                 type="button"
                 onClick={logout}
                 title={collapsed ? 'Logout' : undefined}
                 aria-label="Logout"
-                className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium text-[#B0D1C2] hover:text-white hover:bg-[#1B4D39] transition-colors ${
+                className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium text-[#B0D1C2] hover:text-white hover:bg-[#1B4D39] focus-visible:outline focus-visible:outline-2 focus-visible:outline-white transition-colors ${
                   collapsed ? 'lg:justify-center lg:px-2' : ''
                 }`}
               >
@@ -201,6 +245,83 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
         </div>
       </aside>
+
+      {/* Data Guide Modal */}
+      {isHelpOpen && typeof document !== 'undefined' && createPortal(
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="data-guide-title"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setIsHelpOpen(false);
+          }}
+        >
+          <div
+            ref={helpDialogRef}
+            className="relative w-full max-w-lg rounded-2xl border border-[#E5E7EB] bg-white p-6 shadow-xl animate-fadeIn space-y-4"
+          >
+            <button
+              ref={helpCloseRef}
+              type="button"
+              onClick={() => setIsHelpOpen(false)}
+              aria-label="Close data guide"
+              className="absolute right-4 top-4 inline-flex min-h-9 min-w-9 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#245b29]"
+            >
+              <X size={18} />
+            </button>
+
+            <div>
+              <h2 id="data-guide-title" className="text-lg font-bold text-gray-900 pr-8">
+                CSOTrack Data & Accreditation Guide
+              </h2>
+              <p className="text-sm text-[#374151] mt-1">
+                Province of La Union · Sangguniang Panlalawigan (2025–2028)
+              </p>
+            </div>
+
+            <div className="space-y-3 text-sm text-[#374151]">
+              <div className="rounded-xl bg-gray-50 p-3.5 space-y-1">
+                <p className="font-semibold text-gray-900">Required Registration Fields</p>
+                <p>
+                  Every CSO record requires an <strong>Organization Name</strong> and{' '}
+                  <strong>LGU Represented</strong>. Sector, representative details, resolution
+                  number, and accreditation date can be updated anytime by an administrator.
+                </p>
+              </div>
+
+              <div className="rounded-xl bg-gray-50 p-3.5 space-y-1">
+                <p className="font-semibold text-gray-900">Accreditation Statuses</p>
+                <ul className="list-disc pl-5 space-y-0.5">
+                  <li><strong>Accredited:</strong> Valid SP resolution for the current term.</li>
+                  <li><strong>Pending:</strong> Under secretariat or committee review.</li>
+                  <li><strong>Expired:</strong> Requires renewal for the 2025–2028 term.</li>
+                </ul>
+              </div>
+
+              <div className="rounded-xl bg-gray-50 p-3.5 space-y-1">
+                <p className="font-semibold text-gray-900">Certificate Attachments & Archiving</p>
+                <p>
+                  Supported attachment formats: <code>.pdf</code>, <code>.png</code>,{' '}
+                  <code>.jpg</code>, <code>.doc</code>, <code>.docx</code>. Records must be
+                  archived before they can be permanently deleted.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <button
+                type="button"
+                onClick={() => setIsHelpOpen(false)}
+                className="min-h-10 rounded-xl bg-[#27632A] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1f5022] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#245b29]"
+              >
+                Got it
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </>
   );
 };
