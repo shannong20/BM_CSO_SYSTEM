@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
 import { requireAdminSession } from '@/server/auth/session';
+import { logSecurityEvent } from '@/server/audit';
 import {
   createCloudinarySignedUpload,
   isCloudinaryConfigured,
+  isValidCloudinaryAttachment,
 } from '@/server/cloudinary';
 import {
   getFirestoreCSORecordById,
@@ -88,6 +90,13 @@ export async function POST(
         );
       }
 
+      if (!isValidCloudinaryAttachment(body.storagePath, body.url)) {
+        return NextResponse.json(
+          { success: false, error: 'Invalid attachment storage path or URL.' },
+          { status: 400 }
+        );
+      }
+
       const attachment: CertificateAttachment = {
         name: body.name,
         contentType: body.contentType || 'application/octet-stream',
@@ -97,6 +106,7 @@ export async function POST(
       };
 
       const updatedRecord = await saveFirestoreCertificateAttachment(record, attachment);
+      logSecurityEvent('cso.attachment.complete', { recordId: record.id });
       return NextResponse.json(updatedRecord);
     }
 

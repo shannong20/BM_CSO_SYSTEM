@@ -199,8 +199,10 @@ export const DirectoryClient: React.FC<DirectoryClientProps> = ({
 
     const escapeCSV = (str: string | number | boolean | undefined) => {
       if (str === undefined || str === null) return '""';
-      const s = String(str).replace(/"/g, '""');
-      return `"${s}"`;
+      const raw = String(str);
+      // Neutralize spreadsheet formula injection (=, +, -, @, tab, CR)
+      const neutralized = /^[=+\-@\t\r]/.test(raw) ? `'${raw}` : raw;
+      return `"${neutralized.replace(/"/g, '""')}"`;
     };
 
     const rows = rowsToExport.map((r, idx) => [

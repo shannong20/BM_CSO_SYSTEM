@@ -28,6 +28,17 @@ export const AttachmentPreviewModal: React.FC<AttachmentPreviewModalProps> = ({
   if (!viewingAttachment || typeof document === 'undefined') return null;
 
   const title = viewingAttachment.record.certificateAttachment?.name || 'Attachment';
+  const safeUrl = (() => {
+    try {
+      const parsed = new URL(viewingAttachment.url);
+      if (parsed.protocol === 'https:' || parsed.protocol === 'blob:') {
+        return viewingAttachment.url;
+      }
+      return '';
+    } catch {
+      return '';
+    }
+  })();
 
   return createPortal(
     <div
@@ -57,30 +68,38 @@ export const AttachmentPreviewModal: React.FC<AttachmentPreviewModalProps> = ({
             <CloseIcon size={18} />
           </button>
         </div>
-        <iframe
-          src={viewingAttachment.url}
-          title={title}
-          className="min-h-0 flex-1 border-0"
-        />
+        {safeUrl ? (
+          <iframe
+            src={safeUrl}
+            title={title}
+            className="min-h-0 flex-1 border-0"
+          />
+        ) : (
+          <div className="flex-1 flex items-center justify-center p-6 text-sm text-red-700">
+            Blocked unsafe attachment URL.
+          </div>
+        )}
         <div className="flex items-center justify-between gap-4 border-t border-gray-200 px-5 py-3 text-sm">
           <span className="text-gray-600">If the preview is blank, open or download the file directly.</span>
-          <div className="flex shrink-0 gap-3">
-            <a
-              href={viewingAttachment.url}
-              target="_blank"
-              rel="noreferrer"
-              className="font-semibold text-[#245b29] underline"
-            >
-              Open file
-            </a>
-            <a
-              href={viewingAttachment.url}
-              download={viewingAttachment.record.certificateAttachment?.name || true}
-              className="font-semibold text-[#245b29] underline"
-            >
-              Download
-            </a>
-          </div>
+          {safeUrl && (
+            <div className="flex shrink-0 gap-3">
+              <a
+                href={safeUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-semibold text-[#245b29] underline"
+              >
+                Open file
+              </a>
+              <a
+                href={safeUrl}
+                download={viewingAttachment.record.certificateAttachment?.name || true}
+                className="font-semibold text-[#245b29] underline"
+              >
+                Download
+              </a>
+            </div>
+          )}
         </div>
       </div>
     </div>,
