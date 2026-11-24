@@ -19,6 +19,7 @@ import {
   fetchCSORecords,
   fetchArchiveCSORecord,
   fetchDeleteCSORecord,
+  fetchRemoveCertificateAttachment,
   fetchUploadCertificateAttachment,
 } from '@/client/lib/api';
 import { CSOTable } from '@/client/components/CSOTable';
@@ -37,7 +38,10 @@ function DirectoryPageContent() {
   const [searchQuery, setSearchQuery] = useState(() => searchParams.get('q') ?? '');
   const [selectedLgu, setSelectedLgu] = useState(() => searchParams.get('lgu') ?? '');
   const [selectedSector, setSelectedSector] = useState(() => searchParams.get('sector') ?? '');
-  const [selectedStatus, setSelectedStatus] = useState(() => searchParams.get('status') ?? '');
+  const [selectedStatus, setSelectedStatus] = useState(() => {
+    const status = searchParams.get('status');
+    return status === 'Accredited' || status === 'Pending' ? status : '';
+  });
   const [showArchived, setShowArchived] = useState(() => searchParams.get('archived') === '1');
   const [currentPage, setCurrentPage] = useState(() => {
     const parsed = Number(searchParams.get('page') ?? '1');
@@ -179,6 +183,12 @@ function DirectoryPageContent() {
     setStatusMessage(`Uploaded attachment "${file.name}" for "${record.organizationName}".`);
   };
 
+  const handleRemoveAttachment = async (record: CSORecord) => {
+    const updatedRecord = await fetchRemoveCertificateAttachment(record.id);
+    handleRecordUpdate(updatedRecord);
+    setStatusMessage(`Removed attachment from "${record.organizationName}".`);
+  };
+
   const handleResetFilters = () => {
     setSearchQuery('');
     setSelectedLgu('');
@@ -214,7 +224,7 @@ function DirectoryPageContent() {
 
     const rows = records.map((r, idx) => [
       idx + 1,
-      escapeCSV(r.status === 'Unknown' ? 'NOT SPECIFIED, INPUT VALUE' : r.status),
+      escapeCSV(r.status),
       escapeCSV(r.advocacy ?? ''),
       escapeCSV(r.sector ?? ''),
       escapeCSV(r.organizationName),
@@ -380,9 +390,6 @@ function DirectoryPageContent() {
               <option value="">All statuses</option>
               <option value="Accredited">Accredited</option>
               <option value="Pending">Pending</option>
-              <option value="Expired">Expired</option>
-              <option value="Unknown">Not specified</option>
-
             </select>
           </div>
 
@@ -451,6 +458,7 @@ function DirectoryPageContent() {
             setIsModalOpen(true);
           }}
           onAddAttachment={handleAddAttachment}
+          onRemoveAttachment={handleRemoveAttachment}
           showingArchived={showArchived}
           enablePagination
           defaultPageSize={8}

@@ -85,11 +85,15 @@ export async function deleteFromCloudinary(
   resourceType?: string
 ): Promise<void> {
   const { cloudName, apiKey, apiSecret } = getCloudinaryConfig();
-  if (!cloudName || !apiKey || !apiSecret || !publicId) {
-    return;
+  if (!cloudName || !apiKey || !apiSecret) {
+    throw new Error('Cloudinary is not configured on the server.');
+  }
+  if (!publicId) {
+    throw new Error('Cloudinary attachment identifier is missing.');
   }
 
   const typesToTry = resourceType ? [resourceType] : ['image', 'raw'];
+  let lastError = 'Cloudinary could not delete the attachment.';
   for (const type of typesToTry) {
     const timestamp = Math.floor(Date.now() / 1000);
     const signature = signCloudinaryParams(
@@ -115,11 +119,16 @@ export async function deleteFromCloudinary(
       }
     );
 
-    if (response.ok) {
-      const result = (await response.json()) as { result?: string };
-      if (result.result === 'ok') {
-        return;
-      }
+    if (!response.ok) {
+      lastError = `Cloudinary attachment deletion failed (HTTP ${response.status}).`;
+      continue;
+    }
+
+    const result = (await response.json()) as { result?: string };
+    if (result.result === 'ok' || result.result === 'not found') {
+      return;
     }
   }
+
+  throw new Error(lastError);
 }

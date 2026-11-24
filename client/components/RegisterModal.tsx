@@ -573,8 +573,6 @@ export const RegisterModal: React.FC<RegisterModalProps> = ({
                     >
                       <option value="Accredited">Accredited</option>
                       <option value="Pending">Pending</option>
-                      <option value="Expired">Expired</option>
-                      <option value="Unknown">Not specified</option>
                     </select>
                   </div>
 

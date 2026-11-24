@@ -32,7 +32,7 @@ export function validateCSORecordInput(data: unknown): { valid: true; data: CSOR
   }
 
   const status = d['status'];
-  const validStatuses: AccreditationStatus[] = ['Accredited', 'Pending', 'Expired', 'Unknown'];
+  const validStatuses: AccreditationStatus[] = ['Accredited', 'Pending'];
   if (typeof status !== 'string' || !validStatuses.includes(status as AccreditationStatus)) {
     errors.push({ field: 'status', message: 'Invalid accreditation status.' });
   }

@@ -101,6 +101,14 @@ export async function fetchCertificateAttachmentUrl(id: string): Promise<string>
   return res.data?.url ?? '';
 }
 
+/** DELETE /api/cso/:id/attachment - remove the certificate attachment */
+export async function fetchRemoveCertificateAttachment(id: string): Promise<CSORecord> {
+  const res = await request<CSORecord>(`/api/cso/${id}/attachment`, {
+    method: 'DELETE',
+  });
+  return res.data as CSORecord;
+}
+
 interface SignedCloudinaryUpload {
   uploadUrl: string;
   apiKey: string;

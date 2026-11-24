@@ -30,6 +30,7 @@ interface CSOTableProps {
   onDelete?: (record: CSORecord) => Promise<void>;
   onEdit?: (record: CSORecord) => void;
   onAddAttachment?: (record: CSORecord, file: File) => Promise<void>;
+  onRemoveAttachment?: (record: CSORecord) => Promise<void>;
   showingArchived?: boolean;
   enablePagination?: boolean;
   defaultPageSize?: number;
@@ -47,6 +48,7 @@ export const CSOTable: React.FC<CSOTableProps> = ({
   onDelete,
   onEdit,
   onAddAttachment,
+  onRemoveAttachment,
   showingArchived = false,
   enablePagination = false,
   defaultPageSize = 10,
@@ -71,6 +73,9 @@ export const CSOTable: React.FC<CSOTableProps> = ({
   const [uploadingAttachmentRecordId, setUploadingAttachmentRecordId] = useState<string | null>(null);
   const [pendingAttachmentRecord, setPendingAttachmentRecord] = useState<CSORecord | null>(null);
   const [attachmentUploadError, setAttachmentUploadError] = useState<{ recordId: string; message: string } | null>(null);
+  const [removingAttachmentRecordId, setRemovingAttachmentRecordId] = useState<string | null>(null);
+  const [pendingRemoveAttachmentRecord, setPendingRemoveAttachmentRecord] = useState<CSORecord | null>(null);
+  const [attachmentRemoveError, setAttachmentRemoveError] = useState<{ recordId: string; message: string } | null>(null);
   const attachmentFileInputRef = useRef<HTMLInputElement>(null);
 
   const currentPage = controlledPage ?? internalPage;
@@ -183,6 +188,24 @@ export const CSOTable: React.FC<CSOTableProps> = ({
     }
   };
 
+  const handleRemoveAttachment = async () => {
+    if (!onRemoveAttachment || !pendingRemoveAttachmentRecord) return;
+    const record = pendingRemoveAttachmentRecord;
+    setRemovingAttachmentRecordId(record.id);
+    setAttachmentRemoveError(null);
+    try {
+      await onRemoveAttachment(record);
+      setPendingRemoveAttachmentRecord(null);
+    } catch (error) {
+      setAttachmentRemoveError({
+        recordId: record.id,
+        message: error instanceof Error ? error.message : 'Could not remove the attachment.',
+      });
+    } finally {
+      setRemovingAttachmentRecordId(null);
+    }
+  };
+
   return (
     <>
       <div className="w-full min-w-0 rounded-2xl bg-gray-100 p-2.5 space-y-2.5">
@@ -252,11 +275,7 @@ export const CSOTable: React.FC<CSOTableProps> = ({
                       {record.no ?? startIndex + index + 1}
                     </td>
                     <td className="py-3 px-4">
-                      {record.status === 'Unknown' ? (
-                        <span className="text-sm text-gray-500">{UNSPECIFIED_VALUE}</span>
-                      ) : (
-                        <StatusBadge status={record.status} className="min-h-10" />
-                      )}
+                      <StatusBadge status={record.status} className="min-h-10" />
                     </td>
                     <td className="py-3 px-4 max-w-[260px] truncate font-normal text-[#374151]" title={record.advocacy}>
                       {displayValue(record.advocacy)}
@@ -388,6 +407,24 @@ export const CSOTable: React.FC<CSOTableProps> = ({
                                 </span>
                               </button>
                             )}
+                            {record.certificateAttachment && onRemoveAttachment && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setAttachmentRemoveError(null);
+                                  setPendingRemoveAttachmentRecord(record);
+                                }}
+                                disabled={removingAttachmentRecordId !== null}
+                                title="Remove attachment"
+                                aria-label="Remove attachment"
+                                className="inline-flex min-h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-2 text-red-700 hover:bg-red-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700 disabled:cursor-wait disabled:opacity-60 transition-colors"
+                              >
+                                <Trash2 size={15} />
+                                <span>
+                                  {removingAttachmentRecordId === record.id ? 'Removing...' : 'Remove attachment'}
+                                </span>
+                              </button>
+                            )}
                           </>
                         )}
                         {record.certificateAttachment && (
@@ -410,6 +447,11 @@ export const CSOTable: React.FC<CSOTableProps> = ({
                         {attachmentUploadError?.recordId === record.id && (
                           <span className="max-w-[200px] whitespace-normal text-left text-xs text-red-700" role="alert">
                             {attachmentUploadError.message}
+                          </span>
+                        )}
+                        {attachmentRemoveError?.recordId === record.id && (
+                          <span className="max-w-[200px] whitespace-normal text-left text-xs text-red-700" role="alert">
+                            {attachmentRemoveError.message}
                           </span>
                         )}
                         {archiveError?.recordId === record.id && (
@@ -465,10 +507,20 @@ export const CSOTable: React.FC<CSOTableProps> = ({
         onEdit={onEdit}
         onViewAttachment={handleViewAttachment}
         onAddAttachmentClick={onAddAttachment ? handleAddAttachmentClick : undefined}
+        onRemoveAttachmentClick={
+          isAdmin && onRemoveAttachment
+            ? (record) => {
+                setAttachmentRemoveError(null);
+                setPendingRemoveAttachmentRecord(record);
+              }
+            : undefined
+        }
         openingAttachmentRecordId={openingAttachmentRecordId}
         uploadingAttachmentRecordId={uploadingAttachmentRecordId}
+        removingAttachmentRecordId={removingAttachmentRecordId}
         attachmentError={attachmentError}
         attachmentUploadError={attachmentUploadError}
+        attachmentRemoveError={attachmentRemoveError}
       />
 
       <AttachmentPreviewModal
@@ -493,6 +545,21 @@ export const CSOTable: React.FC<CSOTableProps> = ({
         isLoading={deletingRecordId !== null}
         onConfirm={handleConfirmDelete}
         onCancel={() => setPendingDeleteRecord(null)}
+      />
+
+      <ConfirmDialog
+        isOpen={Boolean(pendingRemoveAttachmentRecord)}
+        title="Remove attachment?"
+        description={
+          pendingRemoveAttachmentRecord
+            ? `Remove "${pendingRemoveAttachmentRecord.certificateAttachment?.name}" from "${pendingRemoveAttachmentRecord.organizationName}"?`
+            : ''
+        }
+        confirmLabel="Remove attachment"
+        loadingLabel="Removing..."
+        isLoading={removingAttachmentRecordId !== null}
+        onConfirm={handleRemoveAttachment}
+        onCancel={() => setPendingRemoveAttachmentRecord(null)}
       />
     </>
   );
