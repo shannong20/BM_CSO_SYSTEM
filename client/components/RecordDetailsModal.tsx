@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Check,
+  Copy,
   X as CloseIcon,
   MapPin,
   Mail,
@@ -54,6 +55,20 @@ export const RecordDetailsModal: React.FC<RecordDetailsModalProps> = ({
 }) => {
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  const handleCopy = async (field: string, value: string | undefined) => {
+    if (!value || !value.trim()) return;
+    try {
+      await navigator.clipboard.writeText(value.trim());
+      setCopiedField(field);
+      setTimeout(() => {
+        setCopiedField((current) => (current === field ? null : current));
+      }, 1800);
+    } catch {
+      // Ignore clipboard permission errors
+    }
+  };
 
   useModalAccessibility({
     isOpen: Boolean(record),
@@ -92,10 +107,10 @@ export const RecordDetailsModal: React.FC<RecordDetailsModalProps> = ({
           <StatusBadge status={record.status} />
           {(record.isWomenLed === true || record.isWomenLed === false) && (
             <span
-              className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full font-semibold text-sm ${
+              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full font-semibold text-xs ${
                 record.isWomenLed
-                  ? 'bg-[#E8F5E9] text-[#245b29]'
-                  : 'bg-gray-100 text-gray-700'
+                  ? 'bg-[#EEF5F0] text-[#143C2C]'
+                  : 'bg-[#F3F4F6] text-[#374151]'
               }`}
             >
               {record.isWomenLed && <Check size={12} strokeWidth={3} />}
@@ -144,14 +159,49 @@ export const RecordDetailsModal: React.FC<RecordDetailsModalProps> = ({
           </div>
           <div>
             <span className="text-[#374151] block">Resolution No.</span>
-            <span className="font-mono font-semibold text-gray-800">{displayValue(record.resolutionNo)}</span>
+            <div className="inline-flex items-center gap-1.5">
+              <span className="font-mono font-semibold text-gray-800">{displayValue(record.resolutionNo)}</span>
+              {record.resolutionNo?.trim() && (
+                <button
+                  type="button"
+                  onClick={() => handleCopy('resolution', record.resolutionNo)}
+                  aria-label="Copy resolution number"
+                  title="Copy resolution number"
+                  className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs text-gray-500 hover:bg-gray-100 hover:text-gray-900"
+                >
+                  {copiedField === 'resolution' ? <Check size={12} className="text-[#143C2C]" /> : <Copy size={12} />}
+                </button>
+              )}
+            </div>
           </div>
           <div className="sm:col-span-2 pt-2 border-t border-gray-200 flex flex-wrap gap-4 text-[#374151]">
-            <span className="flex items-center gap-1.5">
+            <span className="inline-flex items-center gap-1.5">
               <Phone size={13} /> {displayValue(record.contactNumber)}
+              {record.contactNumber?.trim() && (
+                <button
+                  type="button"
+                  onClick={() => handleCopy('contact', record.contactNumber)}
+                  aria-label="Copy contact number"
+                  title="Copy contact number"
+                  className="inline-flex items-center rounded p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-900"
+                >
+                  {copiedField === 'contact' ? <Check size={12} className="text-[#143C2C]" /> : <Copy size={12} />}
+                </button>
+              )}
             </span>
-            <span className="flex items-center gap-1.5">
+            <span className="inline-flex items-center gap-1.5">
               <Mail size={13} /> {displayValue(record.emailAddress)}
+              {record.emailAddress?.trim() && (
+                <button
+                  type="button"
+                  onClick={() => handleCopy('email', record.emailAddress)}
+                  aria-label="Copy email address"
+                  title="Copy email address"
+                  className="inline-flex items-center rounded p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-900"
+                >
+                  {copiedField === 'email' ? <Check size={12} className="text-[#143C2C]" /> : <Copy size={12} />}
+                </button>
+              )}
             </span>
             <span className="flex items-center gap-1.5">
               <Calendar size={13} /> Accredited: {displayValue(record.dateAccredited)}
@@ -241,7 +291,7 @@ export const RecordDetailsModal: React.FC<RecordDetailsModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="min-h-10 px-5 py-2 rounded-xl bg-[#315f2b] hover:bg-[#244b20] text-white text-sm font-semibold shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#245b29] transition-colors"
+            className="min-h-10 px-5 py-2 rounded-xl bg-[#143C2C] hover:bg-[#1B4D39] text-white text-sm font-semibold shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#143C2C] transition-colors"
           >
             Close Preview
           </button>

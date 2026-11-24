@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/client/context/AuthContext';
 import {
@@ -11,11 +11,12 @@ import {
   Plus,
   Landmark,
   Clock,
+  CheckCircle2,
 } from 'lucide-react';
-import { BrandLogo } from '@/client/components/BrandLogo';
 import { CSORecord } from '@/client/types';
 import {
   fetchArchiveCSORecord,
+  fetchRemoveCertificateAttachment,
   fetchUploadCertificateAttachment,
 } from '@/client/lib/api';
 import { MetricCard } from '@/client/components/MetricCard';
@@ -33,16 +34,25 @@ export const DashboardClient: React.FC<DashboardClientProps> = ({
   initialError = '',
 }) => {
   const [records, setRecords] = useState<CSORecord[]>(initialRecords);
+  const [statusMessage, setStatusMessage] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<CSORecord | null>(null);
   const { isAdmin } = useAuth();
+
+  useEffect(() => {
+    if (!statusMessage) return;
+    const timer = setTimeout(() => setStatusMessage(''), 4000);
+    return () => clearTimeout(timer);
+  }, [statusMessage]);
 
   const handleRegisterSuccess = (newRecord: CSORecord) => {
     if (editingRecord) {
       handleRecordUpdate(newRecord);
       setEditingRecord(null);
+      setStatusMessage(`Updated "${newRecord.organizationName}".`);
     } else {
       setRecords((prev) => [newRecord, ...prev]);
+      setStatusMessage(`Registered "${newRecord.organizationName}".`);
     }
   };
 
@@ -55,11 +65,23 @@ export const DashboardClient: React.FC<DashboardClientProps> = ({
   const handleArchive = async (record: CSORecord, archived: boolean) => {
     const updatedRecord = await fetchArchiveCSORecord(record.id, archived);
     handleRecordUpdate(updatedRecord);
+    setStatusMessage(
+      archived
+        ? `Archived "${record.organizationName}".`
+        : `Restored "${record.organizationName}".`
+    );
   };
 
   const handleAddAttachment = async (record: CSORecord, file: File) => {
     const updatedRecord = await fetchUploadCertificateAttachment(record.id, file);
     handleRecordUpdate(updatedRecord);
+    setStatusMessage(`Uploaded attachment "${file.name}" for "${record.organizationName}".`);
+  };
+
+  const handleRemoveAttachment = async (record: CSORecord) => {
+    const updatedRecord = await fetchRemoveCertificateAttachment(record.id);
+    handleRecordUpdate(updatedRecord);
+    setStatusMessage(`Removed attachment from "${record.organizationName}".`);
   };
 
   const activeRecords = records.filter((r) => !r.archived);
@@ -76,10 +98,10 @@ export const DashboardClient: React.FC<DashboardClientProps> = ({
   return (
     <div className="space-y-6 animate-fadeIn">
       {/* Header Banner */}
-      <div className="relative rounded-2xl bg-[#143C2C] p-6 sm:p-7 text-white shadow-sm overflow-hidden border border-[#1E523D]">
-        <div className="relative z-10 max-w-3xl space-y-3">
-          <div className="inline-flex min-h-9 items-center gap-2 px-3.5 rounded-full bg-white/10 text-white text-sm font-medium">
-            <Landmark size={15} />
+      <div className="rounded-2xl bg-[#143C2C] p-6 sm:p-7 text-white shadow-sm border border-[#1E523D]">
+        <div className="max-w-3xl space-y-3">
+          <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-white/80">
+            <Landmark size={14} />
             <span>Province of La Union · Sangguniang Panlalawigan (Term 2025–2028)</span>
           </div>
 
@@ -87,26 +109,26 @@ export const DashboardClient: React.FC<DashboardClientProps> = ({
             SP Accreditation Overview
           </h1>
 
-          <p className="text-sm sm:text-base text-emerald-100/90 max-w-2xl leading-relaxed">
-            View accredited Civil Society Organizations across La Union, track pending reviews, or register a new organization record.
+          <p className="text-sm sm:text-base text-white/80 max-w-2xl leading-relaxed">
+            View accredited Civil Society Organizations across La Union, review pending applications, or register a new organization record.
           </p>
 
-          <div className="pt-2 flex flex-wrap gap-3">
+          <div className="pt-2 flex flex-wrap gap-2.5">
             <Link
               href="/directory"
-              className="group inline-flex min-h-11 items-center gap-2 px-5 py-2.5 rounded-xl bg-white text-[#143C2C] text-sm font-bold shadow-sm hover:bg-emerald-50 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white transition-all"
+              className="group inline-flex min-h-9 items-center gap-2 px-4 py-2 rounded-xl bg-white text-[#143C2C] text-sm font-semibold shadow-sm hover:bg-gray-100 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white transition-all"
             >
               <span>Open CSO Directory</span>
-              <ArrowRight size={16} className="transition-transform group-hover:translate-x-0.5" />
+              <ArrowRight size={15} className="transition-transform group-hover:translate-x-0.5" />
             </Link>
 
             {isAdmin && (
               <button
                 type="button"
                 onClick={() => setIsModalOpen(true)}
-                className="inline-flex min-h-11 items-center gap-2 px-5 py-2.5 rounded-xl bg-[#27632A] border border-white/15 text-white text-sm font-semibold hover:bg-[#317835] active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white transition-all"
+                className="inline-flex min-h-9 items-center gap-2 px-4 py-2 rounded-xl bg-white/15 border border-white/20 text-white text-sm font-semibold hover:bg-white/20 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white transition-all"
               >
-                <Plus size={16} />
+                <Plus size={15} />
                 <span>Register New CSO</span>
               </button>
             )}
@@ -114,21 +136,13 @@ export const DashboardClient: React.FC<DashboardClientProps> = ({
             {pendingCount > 0 && (
               <Link
                 href="/directory?status=Pending"
-                className="inline-flex min-h-11 items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 border border-white/20 text-white text-sm font-medium hover:bg-white/15 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white transition-all tabular-nums"
+                className="inline-flex min-h-9 items-center gap-2 px-3.5 py-2 rounded-xl bg-white/10 border border-white/15 text-white text-sm font-medium hover:bg-white/15 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white transition-all tabular-nums"
               >
-                <Clock size={16} />
+                <Clock size={15} />
                 <span>Review Pending ({pendingCount})</span>
               </Link>
             )}
           </div>
-        </div>
-
-        {/* Authentic Provincial Seal Watermark */}
-        <div
-          aria-hidden="true"
-          className="hidden sm:flex absolute right-6 top-1/2 -translate-y-1/2 opacity-15 pointer-events-none select-none"
-        >
-          <BrandLogo size={170} />
         </div>
       </div>
 
@@ -141,7 +155,7 @@ export const DashboardClient: React.FC<DashboardClientProps> = ({
           badgeText="All Active"
           badgeType="info"
           icon={Users}
-          iconBgColor="bg-emerald-50"
+          iconBgColor="bg-[#F3F4F6]"
           iconColor="text-[#143C2C]"
           delayMs={0}
           href="/directory"
@@ -154,8 +168,8 @@ export const DashboardClient: React.FC<DashboardClientProps> = ({
           badgeText={`${accreditedPct}%`}
           badgeType="success"
           icon={ShieldCheck}
-          iconBgColor="bg-green-50"
-          iconColor="text-[#2E7D32]"
+          iconBgColor="bg-[#EEF5F0]"
+          iconColor="text-[#143C2C]"
           delayMs={60}
           href="/directory?status=Accredited"
         />
@@ -167,8 +181,8 @@ export const DashboardClient: React.FC<DashboardClientProps> = ({
           badgeText={`${womenLedPct}%`}
           badgeType="warning"
           icon={HeartHandshake}
-          iconBgColor="bg-amber-50"
-          iconColor="text-[#D97706]"
+          iconBgColor="bg-[#F3F4F6]"
+          iconColor="text-[#143C2C]"
           delayMs={120}
         />
       </div>
@@ -192,21 +206,34 @@ export const DashboardClient: React.FC<DashboardClientProps> = ({
             </p>
           </div>
 
-          <Link
-            href="/directory"
-            className="inline-flex min-h-10 items-center gap-2 text-sm font-semibold text-[#245b29] hover:text-[#143C2C] hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#245b29]"
-          >
-            <span>View all directory records</span>
-            <ArrowRight size={14} />
-          </Link>
+          <div className="flex items-center gap-3">
+            {statusMessage && (
+              <p
+                role="status"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-[#EEF5F0] px-3 py-1.5 text-sm font-medium text-[#143C2C]"
+              >
+                <CheckCircle2 size={15} />
+                <span>{statusMessage}</span>
+              </p>
+            )}
+            <Link
+              href="/directory"
+              className="inline-flex min-h-10 items-center gap-2 text-sm font-semibold text-[#143C2C] hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#143C2C]"
+            >
+              <span>View all directory records</span>
+              <ArrowRight size={14} />
+            </Link>
+          </div>
         </div>
 
         <CSOTable
           records={activeRecords.slice(0, 20)}
+          variant="summary"
           enablePagination
           defaultPageSize={5}
           onArchive={handleArchive}
           onAddAttachment={handleAddAttachment}
+          onRemoveAttachment={handleRemoveAttachment}
           onEdit={(record) => {
             setEditingRecord(record);
             setIsModalOpen(true);
