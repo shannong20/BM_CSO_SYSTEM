@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireAdminSession } from '@/server/auth/session';
 import {
   createCloudinarySignedUpload,
   isCloudinaryConfigured,
@@ -43,6 +44,9 @@ export async function POST(
   request: Request,
   context: { params: { id: string } }
 ) {
+  const unauthorized = requireAdminSession(request);
+  if (unauthorized) return unauthorized;
+
   try {
     if (!isCloudinaryConfigured) {
       return NextResponse.json(

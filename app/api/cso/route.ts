@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
+import { requireAdminSession } from '@/server/auth/session';
 import {
   getFirestoreCSORecords,
   createFirestoreCSORecord,
 } from '@/server/cso/queries';
+import { validateCSORecordInput } from '@/server/cso/validation';
 
 export async function GET(request: Request) {
   try {
@@ -45,58 +47,36 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const unauthorized = requireAdminSession(request);
+  if (unauthorized) return unauthorized;
+
   try {
     const body = await request.json();
-
-    const {
-      organizationName,
-      lguRepresented,
-      sector,
-      address,
-      advocacy,
-      isWomenLed,
-      representativeName,
-      position,
-      contactNumber,
-      emailAddress,
-      accreditingAgency,
-      resolutionNo,
-      dateAccredited,
-      status,
-    } = body;
-
-    if (!organizationName || !lguRepresented || !sector || !address) {
+    const validation = validateCSORecordInput(body);
+    if (!validation.valid) {
       return NextResponse.json(
-        { success: false, error: 'Missing required organization fields.' },
+        {
+          success: false,
+          error: validation.errors[0]?.message || 'Invalid CSO record data.',
+          errors: validation.errors,
+        },
         { status: 400 }
       );
     }
 
-    const newRecord = await createFirestoreCSORecord({
-      organizationName,
-      lguRepresented,
-      sector,
-      address,
-      advocacy: advocacy || '',
-      isWomenLed: Boolean(isWomenLed),
-      representativeName: representativeName || '',
-      position: position || '',
-      contactNumber: contactNumber || '',
-      emailAddress: emailAddress || '',
-      accreditingAgency: accreditingAgency || 'DOLE',
-      resolutionNo: resolutionNo || '',
-      dateAccredited: dateAccredited || '',
-      status: (status as any) || 'Accredited',
-    });
+    const newRecord = await createFirestoreCSORecord(validation.data);
 
     return NextResponse.json({
       success: true,
       message: 'CSO registered successfully',
       data: newRecord,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     return NextResponse.json(
-      { success: false, error: error.message || 'Failed to register CSO' },
+      {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to register CSO',
+      },
       { status: 500 }
     );
   }
