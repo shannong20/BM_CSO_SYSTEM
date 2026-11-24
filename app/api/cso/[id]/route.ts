@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireAdminSession } from '@/server/auth/session';
+import { logSecurityEvent } from '@/server/audit';
 import {
   deleteFirestoreCSORecord,
   getFirestoreCSORecordById,
@@ -37,6 +38,7 @@ export async function PUT(
     }
 
     const updatedRecord = await updateFirestoreCSORecord(existing, validation.data);
+    logSecurityEvent('cso.update', { recordId: updatedRecord.id });
     return NextResponse.json({
       success: true,
       message: 'CSO updated successfully',
@@ -70,6 +72,7 @@ export async function DELETE(
     }
 
     await deleteFirestoreCSORecord(existing);
+    logSecurityEvent('cso.delete', { recordId: existing.id });
     return NextResponse.json({
       success: true,
       message: 'CSO deleted permanently.',

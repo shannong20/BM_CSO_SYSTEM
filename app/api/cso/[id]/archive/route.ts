@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireAdminSession } from '@/server/auth/session';
+import { logSecurityEvent } from '@/server/audit';
 import {
   getFirestoreCSORecordById,
   setFirestoreCSORecordArchived,
@@ -30,6 +31,7 @@ export async function POST(
     }
 
     const updatedRecord = await setFirestoreCSORecordArchived(existing, body.archived);
+    logSecurityEvent('cso.archive', { recordId: existing.id, archived: body.archived });
     return NextResponse.json({
       success: true,
       data: updatedRecord,

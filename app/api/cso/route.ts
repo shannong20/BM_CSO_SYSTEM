@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireAdminSession } from '@/server/auth/session';
+import { logSecurityEvent } from '@/server/audit';
 import {
   getFirestoreCSORecords,
   createFirestoreCSORecord,
@@ -65,6 +66,7 @@ export async function POST(request: Request) {
     }
 
     const newRecord = await createFirestoreCSORecord(validation.data);
+    logSecurityEvent('cso.create', { recordId: newRecord.id });
 
     return NextResponse.json({
       success: true,
