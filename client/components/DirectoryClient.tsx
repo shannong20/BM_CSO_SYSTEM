@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/client/context/AuthContext';
@@ -52,7 +52,28 @@ export const DirectoryClient: React.FC<DirectoryClientProps> = ({
   });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<CSORecord | null>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const { isAdmin } = useAuth();
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey) return;
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.tagName === 'SELECT' ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+      e.preventDefault();
+      searchInputRef.current?.focus();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedQuery(searchQuery), 250);
@@ -273,7 +294,7 @@ export const DirectoryClient: React.FC<DirectoryClientProps> = ({
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2.5">
           {isAdmin && (
             <button
               type="button"
@@ -282,9 +303,9 @@ export const DirectoryClient: React.FC<DirectoryClientProps> = ({
                 setCurrentPage(1);
               }}
               aria-pressed={showArchived}
-              className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-[#374151] shadow-sm transition-colors hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#245b29]"
+              className="inline-flex min-h-9 items-center gap-1.5 rounded-xl border border-gray-300 bg-white px-3.5 py-1.5 text-sm font-semibold text-[#374151] shadow-sm transition-colors hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#143C2C]"
             >
-              {showArchived ? <ArchiveRestore size={16} /> : <Archive size={16} />}
+              {showArchived ? <ArchiveRestore size={15} /> : <Archive size={15} />}
               <span>
                 {showArchived
                   ? 'View Active Records'
@@ -295,9 +316,9 @@ export const DirectoryClient: React.FC<DirectoryClientProps> = ({
           <button
             type="button"
             onClick={() => exportToCSV(filteredRecords)}
-            className="inline-flex min-h-11 items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-gray-300 text-[#374151] text-sm font-semibold hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#245b29] transition-colors shadow-sm"
+            className="inline-flex min-h-9 items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white border border-gray-300 text-[#374151] text-sm font-semibold hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#143C2C] transition-colors shadow-sm"
           >
-            <Download size={16} />
+            <Download size={15} />
             <span>Export CSV</span>
           </button>
 
@@ -308,9 +329,9 @@ export const DirectoryClient: React.FC<DirectoryClientProps> = ({
                 setEditingRecord(null);
                 setIsModalOpen(true);
               }}
-              className="inline-flex min-h-11 items-center gap-2 px-5 py-2.5 rounded-xl bg-[#143C2C] hover:bg-[#1B4D39] text-white text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#143C2C] transition-colors shadow-sm"
+              className="inline-flex min-h-9 items-center gap-1.5 px-4 py-1.5 rounded-xl bg-[#143C2C] hover:bg-[#1B4D39] text-white text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#143C2C] transition-colors shadow-sm"
             >
-              <Plus size={16} />
+              <Plus size={15} />
               <span>Register CSO</span>
             </button>
           )}
@@ -334,7 +355,7 @@ export const DirectoryClient: React.FC<DirectoryClientProps> = ({
                 setCurrentPage(1);
               }}
               aria-pressed={active}
-              className={`inline-flex min-h-10 items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-all tabular-nums focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#143C2C] ${
+              className={`inline-flex min-h-9 items-center gap-2 rounded-xl px-3.5 py-1.5 text-sm font-semibold transition-all tabular-nums focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#143C2C] ${
                 active
                   ? 'bg-[#143C2C] text-white shadow-sm'
                   : 'bg-white text-[#374151] border border-[#E5E7EB] hover:bg-gray-50'
@@ -366,6 +387,7 @@ export const DirectoryClient: React.FC<DirectoryClientProps> = ({
                 className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#4B5563] pointer-events-none"
               />
               <input
+                ref={searchInputRef}
                 id="directory-search"
                 type="text"
                 value={searchQuery}
@@ -374,9 +396,16 @@ export const DirectoryClient: React.FC<DirectoryClientProps> = ({
                   setCurrentPage(1);
                 }}
                 placeholder="Type a name, barangay, or resolution..."
-                className="w-full min-h-11 pl-10 pr-10 py-2.5 rounded-xl border border-gray-300 text-sm text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#143C2C]/20 focus:border-[#143C2C] transition-all placeholder:text-gray-400"
+                className="w-full min-h-10 pl-10 pr-12 py-2 rounded-xl border border-gray-300 text-sm text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#143C2C]/20 focus:border-[#143C2C] transition-all placeholder:text-gray-400"
               />
-              {searchQuery && (
+              {!searchQuery ? (
+                <kbd
+                  aria-hidden="true"
+                  className="hidden sm:inline-flex items-center justify-center absolute right-3 top-1/2 -translate-y-1/2 rounded border border-gray-200 bg-gray-50 px-1.5 py-0.5 text-[11px] font-mono text-gray-500 pointer-events-none"
+                >
+                  /
+                </kbd>
+              ) : (
                 <button
                   type="button"
                   onClick={() => {
@@ -404,7 +433,7 @@ export const DirectoryClient: React.FC<DirectoryClientProps> = ({
                 setSelectedLgu(e.target.value);
                 setCurrentPage(1);
               }}
-              className="w-full min-h-11 px-3 py-2.5 rounded-xl border border-gray-300 bg-white text-sm text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#143C2C]/20 focus:border-[#143C2C] transition-all"
+              className="w-full min-h-10 px-3 py-2 rounded-xl border border-gray-300 bg-white text-sm text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#143C2C]/20 focus:border-[#143C2C] transition-all"
             >
               <option value="">All LGUs</option>
               {lguOptions.map((lgu) => (
@@ -426,7 +455,7 @@ export const DirectoryClient: React.FC<DirectoryClientProps> = ({
                 setSelectedSector(e.target.value);
                 setCurrentPage(1);
               }}
-              className="w-full min-h-11 px-3 py-2.5 rounded-xl border border-gray-300 bg-white text-sm text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#143C2C]/20 focus:border-[#143C2C] transition-all"
+              className="w-full min-h-10 px-3 py-2 rounded-xl border border-gray-300 bg-white text-sm text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#143C2C]/20 focus:border-[#143C2C] transition-all"
             >
               <option value="">All sectors</option>
               {sectorOptions.map((sector) => (
@@ -442,7 +471,7 @@ export const DirectoryClient: React.FC<DirectoryClientProps> = ({
               type="button"
               onClick={handleResetFilters}
               disabled={!searchQuery && !selectedLgu && !selectedSector && !selectedStatus}
-              className="w-full min-h-11 px-3.5 py-2.5 rounded-xl border border-gray-300 text-[#374151] hover:text-red-700 hover:bg-red-50 hover:border-red-200 disabled:opacity-45 disabled:hover:bg-transparent disabled:hover:text-[#374151] disabled:hover:border-gray-300 disabled:cursor-not-allowed text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#245b29] transition-colors flex items-center justify-center gap-1.5"
+              className="w-full min-h-10 px-3 py-2 rounded-xl border border-gray-300 text-[#374151] hover:text-red-700 hover:bg-red-50 hover:border-red-200 disabled:opacity-45 disabled:hover:bg-transparent disabled:hover:text-[#374151] disabled:hover:border-gray-300 disabled:cursor-not-allowed text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#143C2C] transition-colors flex items-center justify-center gap-1.5"
             >
               <RotateCcw size={14} />
               <span>Clear filters</span>
@@ -450,6 +479,65 @@ export const DirectoryClient: React.FC<DirectoryClientProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Active Filter Chips */}
+      {(searchQuery || selectedLgu || selectedSector || selectedStatus) && (
+        <div className="flex flex-wrap items-center gap-2 px-1">
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearchQuery('');
+                setDebouncedQuery('');
+                setCurrentPage(1);
+              }}
+              className="inline-flex items-center gap-1.5 rounded-full bg-white border border-[#E5E7EB] px-3 py-1 text-xs font-medium text-[#374151] hover:bg-gray-50"
+            >
+              <span>Search: &ldquo;{searchQuery}&rdquo;</span>
+              <X size={12} />
+            </button>
+          )}
+          {selectedLgu && (
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedLgu('');
+                setCurrentPage(1);
+              }}
+              className="inline-flex items-center gap-1.5 rounded-full bg-white border border-[#E5E7EB] px-3 py-1 text-xs font-medium text-[#374151] hover:bg-gray-50"
+            >
+              <span>LGU: {selectedLgu}</span>
+              <X size={12} />
+            </button>
+          )}
+          {selectedSector && (
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedSector('');
+                setCurrentPage(1);
+              }}
+              className="inline-flex items-center gap-1.5 rounded-full bg-white border border-[#E5E7EB] px-3 py-1 text-xs font-medium text-[#374151] hover:bg-gray-50"
+            >
+              <span>Sector: {selectedSector}</span>
+              <X size={12} />
+            </button>
+          )}
+          {selectedStatus && (
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedStatus('');
+                setCurrentPage(1);
+              }}
+              className="inline-flex items-center gap-1.5 rounded-full bg-white border border-[#E5E7EB] px-3 py-1 text-xs font-medium text-[#374151] hover:bg-gray-50"
+            >
+              <span>Status: {selectedStatus}</span>
+              <X size={12} />
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Results Info Bar */}
       <div className="flex flex-wrap items-center justify-between gap-2 px-1">

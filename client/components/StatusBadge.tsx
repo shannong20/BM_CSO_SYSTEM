@@ -12,9 +12,9 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, className = ''
   if (normStatus === 'accredited') {
     return (
       <span
-        className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-[#E8F5E9] text-[#245b29] ${className}`}
+        className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-[#EEF5F0] text-[#143C2C] ${className}`}
       >
-        <span className="w-1.5 h-1.5 rounded-full bg-[#2E7D32] mr-1.5"></span>
+        <span className="w-1.5 h-1.5 rounded-full bg-[#143C2C] mr-1.5" />
         Accredited
       </span>
     );
@@ -23,9 +23,9 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, className = ''
   if (normStatus === 'pending') {
     return (
       <span
-        className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-[#FFF3E0] text-[#8A3D00] ${className}`}
+        className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-[#F3F4F6] text-[#374151] border border-[#E5E7EB] ${className}`}
       >
-        <span className="w-1.5 h-1.5 rounded-full bg-[#EF6C00] mr-1.5"></span>
+        <span className="w-1.5 h-1.5 rounded-full bg-[#6B7280] mr-1.5" />
         Pending
       </span>
     );
@@ -33,9 +33,9 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, className = ''
 
   return (
     <span
-      className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-gray-100 text-gray-700 ${className}`}
+      className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-[#F3F4F6] text-[#4B5563] ${className}`}
     >
-      <span className="w-1.5 h-1.5 rounded-full bg-gray-500 mr-1.5"></span>
+      <span className="w-1.5 h-1.5 rounded-full bg-[#9CA3AF] mr-1.5" />
       Not specified
     </span>
   );

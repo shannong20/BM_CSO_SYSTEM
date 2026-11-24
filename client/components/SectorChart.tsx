@@ -40,7 +40,7 @@ export const SectorChart: React.FC<SectorChartProps> = ({ records }) => {
             <h2 className="text-base font-bold text-[#111827] tracking-tight">Sector Distribution</h2>
             <p className="text-sm text-[#374151]">Breakdown of registered CSOs by category across La Union</p>
           </div>
-          <span className="inline-flex min-h-9 items-center text-xs font-semibold px-3 rounded-full bg-emerald-50 text-emerald-900 tabular-nums">
+          <span className="inline-flex items-center text-xs font-semibold px-2.5 py-1 rounded-full bg-[#F3F4F6] text-[#374151] tabular-nums">
             {sortedSectors.length} Sectors Active
           </span>
         </div>
@@ -68,9 +68,9 @@ export const SectorChart: React.FC<SectorChartProps> = ({ records }) => {
                       <span className="text-[#374151]">({percentage}%)</span>
                     </div>
                   </div>
-                  <div className="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="w-full h-2 bg-[#F3F4F6] rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-gradient-to-r from-[#2E7D32] to-[#549448] rounded-full transition-all duration-500 ease-out"
+                      className="h-full bg-[#143C2C] rounded-full transition-all duration-500 ease-out"
                       style={{ width: `${(count / maxCount) * 100}%` }}
                     />
                   </div>
@@ -101,22 +101,22 @@ export const SectorChart: React.FC<SectorChartProps> = ({ records }) => {
           <h2 className="text-base font-bold text-[#111827] tracking-tight mb-1">Accreditation Status</h2>
           <p className="text-sm text-[#374151] mb-6">Accredited and pending organizations (Term 2025–2028)</p>
 
-          <div className="space-y-4">
+          <div className="space-y-3">
             {/* Accredited */}
             <Link
               href="/directory?status=Accredited"
-              className="min-h-16 p-4 rounded-xl bg-[#F0FDF4] hover:bg-emerald-100/70 active:scale-[0.99] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#245b29] transition-all flex items-center justify-between"
+              className="min-h-16 p-4 rounded-xl bg-[#F8F9FA] border border-[#E5E7EB] hover:border-[#143C2C]/40 hover:bg-[#F3F6F4] active:scale-[0.99] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#143C2C] transition-all flex items-center justify-between"
             >
               <div className="flex items-center gap-3">
-                <span className="w-3 h-3 rounded-full bg-[#2E7D32]"></span>
+                <span className="w-2.5 h-2.5 rounded-full bg-[#143C2C]"></span>
                 <div>
-                  <h3 className="text-sm font-bold text-gray-900">Accredited</h3>
-                  <p className="text-sm text-[#245b29] font-medium">Valid SP Resolution</p>
+                  <h3 className="text-sm font-bold text-[#111827]">Accredited</h3>
+                  <p className="text-sm text-[#4B5563]">Valid SP Resolution</p>
                 </div>
               </div>
               <div className="text-right tabular-nums">
-                <span className="text-base font-bold text-[#2E7D32]">{accreditedCount}</span>
-                <span className="text-sm text-[#374151] block">
+                <span className="text-base font-bold text-[#143C2C]">{accreditedCount}</span>
+                <span className="text-sm text-[#4B5563] block">
                   {Math.round((accreditedCount / total) * 100)}%
                 </span>
               </div>
@@ -125,18 +125,18 @@ export const SectorChart: React.FC<SectorChartProps> = ({ records }) => {
             {/* Pending */}
             <Link
               href="/directory?status=Pending"
-              className="min-h-16 p-4 rounded-xl bg-[#FFFBEB] hover:bg-amber-100/70 active:scale-[0.99] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#8A3D00] transition-all flex items-center justify-between"
+              className="min-h-16 p-4 rounded-xl bg-[#F8F9FA] border border-[#E5E7EB] hover:border-gray-400 hover:bg-[#F3F4F6] active:scale-[0.99] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#143C2C] transition-all flex items-center justify-between"
             >
               <div className="flex items-center gap-3">
-                <span className="w-3 h-3 rounded-full bg-[#8A3D00]"></span>
+                <span className="w-2.5 h-2.5 rounded-full bg-[#6B7280]"></span>
                 <div>
-                  <h3 className="text-sm font-bold text-gray-900">Pending Review</h3>
-                  <p className="text-sm text-[#8A3D00] font-medium">Secretariat verification</p>
+                  <h3 className="text-sm font-bold text-[#111827]">Pending Review</h3>
+                  <p className="text-sm text-[#4B5563]">Secretariat verification</p>
                 </div>
               </div>
               <div className="text-right tabular-nums">
-                <span className="text-base font-bold text-[#8A3D00]">{pendingCount}</span>
-                <span className="text-sm text-[#374151] block">
+                <span className="text-base font-bold text-[#111827]">{pendingCount}</span>
+                <span className="text-sm text-[#4B5563] block">
                   {Math.round((pendingCount / total) * 100)}%
                 </span>
               </div>

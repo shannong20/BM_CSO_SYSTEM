@@ -22,6 +22,7 @@ interface CSORegistrationFormProps {
   record?: CSORecord | null;
   onSubmitRecord: (data: CSORecordInput) => Promise<void>;
   onCancel: () => void;
+  onDirtyChange?: (dirty: boolean) => void;
   variant?: 'modal' | 'page';
 }
 
@@ -46,6 +47,7 @@ export const CSORegistrationForm: React.FC<CSORegistrationFormProps> = ({
   record = null,
   onSubmitRecord,
   onCancel,
+  onDirtyChange,
   variant = 'modal',
 }) => {
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
@@ -56,6 +58,7 @@ export const CSORegistrationForm: React.FC<CSORegistrationFormProps> = ({
   useEffect(() => {
     setCurrentStep(1);
     setErrorMsg('');
+    onDirtyChange?.(false);
     if (record) {
       setFormData({
         organizationName: record.organizationName,
@@ -88,6 +91,7 @@ export const CSORegistrationForm: React.FC<CSORegistrationFormProps> = ({
     } else {
       setFormData((prev) => ({ ...prev, [name]: value }));
     }
+    onDirtyChange?.(true);
     if (errorMsg) setErrorMsg('');
   };
 
@@ -134,19 +138,19 @@ export const CSORegistrationForm: React.FC<CSORegistrationFormProps> = ({
     }
   };
 
-  const cardClass =
-    variant === 'page'
-      ? 'bg-white rounded-2xl p-6 sm:p-8 border border-gray-200/80 shadow-sm space-y-6 animate-fadeIn'
-      : 'space-y-6 animate-fadeIn';
+  const isModal = variant === 'modal';
+  const cardClass = isModal
+    ? 'space-y-4 animate-fadeIn'
+    : 'bg-white rounded-2xl p-6 sm:p-8 border border-gray-200/80 shadow-sm space-y-6 animate-fadeIn';
 
   return (
-    <div className="space-y-6">
+    <div className={isModal ? 'space-y-4' : 'space-y-6'}>
       {/* 3-Step Indicator Bar */}
       <div
-        className={`flex items-center justify-center gap-4 sm:gap-10 py-3 px-4 overflow-x-auto text-sm ${
-          variant === 'page'
-            ? 'bg-white rounded-2xl border border-gray-200/80 shadow-sm'
-            : 'bg-gray-50 rounded-xl'
+        className={`flex items-center justify-center gap-4 sm:gap-10 px-4 overflow-x-auto text-sm ${
+          isModal
+            ? 'bg-gray-50 rounded-xl py-2'
+            : 'bg-white rounded-2xl border border-gray-200/80 shadow-sm py-3'
         }`}
       >
         {/* Step 1 */}
@@ -158,7 +162,7 @@ export const CSORegistrationForm: React.FC<CSORegistrationFormProps> = ({
             currentStep === 1
               ? 'text-gray-900 font-bold'
               : currentStep > 1
-                ? 'text-[#245b29] font-medium cursor-pointer hover:underline'
+                ? 'text-[#143C2C] font-medium cursor-pointer hover:underline'
                 : 'text-[#374151]'
           }`}
         >
@@ -167,7 +171,7 @@ export const CSORegistrationForm: React.FC<CSORegistrationFormProps> = ({
               currentStep === 1
                 ? 'bg-[#143C2C] text-white'
                 : currentStep > 1
-                  ? 'bg-emerald-100 text-[#245b29]'
+                  ? 'bg-[#EEF5F0] text-[#143C2C]'
                   : 'bg-gray-200 text-[#374151]'
             }`}
           >
@@ -192,7 +196,7 @@ export const CSORegistrationForm: React.FC<CSORegistrationFormProps> = ({
             currentStep === 2
               ? 'text-gray-900 font-bold'
               : currentStep > 2
-                ? 'text-[#245b29] font-medium hover:underline'
+                ? 'text-[#143C2C] font-medium hover:underline'
                 : 'text-[#374151]'
           }`}
         >
@@ -201,7 +205,7 @@ export const CSORegistrationForm: React.FC<CSORegistrationFormProps> = ({
               currentStep === 2
                 ? 'bg-[#143C2C] text-white'
                 : currentStep > 2
-                  ? 'bg-emerald-100 text-[#245b29]'
+                  ? 'bg-[#EEF5F0] text-[#143C2C]'
                   : 'bg-gray-200 text-[#374151]'
             }`}
           >
@@ -245,23 +249,23 @@ export const CSORegistrationForm: React.FC<CSORegistrationFormProps> = ({
         {/* Step 1: Organization profile */}
         {currentStep === 1 && (
           <div className={cardClass}>
-            <div className="flex items-start gap-4 pb-4">
-              <div className="w-12 h-12 rounded-xl bg-[#EBF3E8] text-[#3A7530] flex items-center justify-center shrink-0">
-                <Building2 size={24} />
+            <div className={`flex items-start gap-3.5 ${isModal ? 'pb-1' : 'pb-4'}`}>
+              <div className={`${isModal ? 'w-10 h-10' : 'w-12 h-12'} rounded-xl bg-[#EEF5F0] text-[#143C2C] flex items-center justify-center shrink-0`}>
+                <Building2 size={isModal ? 20 : 24} />
               </div>
               <div>
-                <span className="text-sm font-bold uppercase tracking-wider text-[#245b29] block">
+                <span className="text-xs font-bold uppercase tracking-wider text-[#143C2C] block">
                   SECTION 01
                 </span>
-                <h3 className="text-lg font-bold text-gray-900">Organization profile</h3>
-                <p className="text-sm text-[#374151]">
+                <h3 className="text-base sm:text-lg font-bold text-gray-900">Organization profile</h3>
+                <p className="text-xs sm:text-sm text-[#374151]">
                   Basic information used in the public CSO directory.
                 </p>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div className="space-y-1.5 md:col-span-2">
+            <div className={`grid grid-cols-1 md:grid-cols-2 ${isModal ? 'gap-3.5' : 'gap-5'}`}>
+              <div className="space-y-1 md:col-span-2">
                 <label className="text-sm font-semibold text-[#374151]">
                   Name of Organization <span className="text-red-500">*</span>
                 </label>
@@ -271,12 +275,12 @@ export const CSORegistrationForm: React.FC<CSORegistrationFormProps> = ({
                   value={formData.organizationName}
                   onChange={handleChange}
                   placeholder="e.g. La Union Coastal Guardians"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#4E8D42] focus:border-transparent transition-all shadow-sm"
+                  className={`w-full px-3.5 ${isModal ? 'py-2' : 'py-2.5'} rounded-xl border border-gray-200 bg-white text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#4E8D42] focus:border-transparent transition-all shadow-sm`}
                   required
                 />
               </div>
 
-              <div className="space-y-1.5">
+              <div className="space-y-1">
                 <label className="text-sm font-semibold text-[#374151]">
                   LGU Represented <span className="text-red-500">*</span>
                 </label>
@@ -284,7 +288,7 @@ export const CSORegistrationForm: React.FC<CSORegistrationFormProps> = ({
                   name="lguRepresented"
                   value={formData.lguRepresented}
                   onChange={handleChange}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#4E8D42] focus:border-transparent transition-all shadow-sm"
+                  className={`w-full px-3.5 ${isModal ? 'py-2' : 'py-2.5'} rounded-xl border border-gray-200 bg-white text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#4E8D42] focus:border-transparent transition-all shadow-sm`}
                   required
                 >
                   <option value="">Select an LGU</option>
@@ -302,13 +306,13 @@ export const CSORegistrationForm: React.FC<CSORegistrationFormProps> = ({
                 </select>
               </div>
 
-              <div className="space-y-1.5">
+              <div className="space-y-1">
                 <label className="text-sm font-semibold text-[#374151]">Sector</label>
                 <select
                   name="sector"
                   value={formData.sector}
                   onChange={handleChange}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#4E8D42] focus:border-transparent transition-all shadow-sm"
+                  className={`w-full px-3.5 ${isModal ? 'py-2' : 'py-2.5'} rounded-xl border border-gray-200 bg-white text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#4E8D42] focus:border-transparent transition-all shadow-sm`}
                 >
                   <option value="">Select a sector</option>
                   {formData.sector &&
@@ -323,7 +327,7 @@ export const CSORegistrationForm: React.FC<CSORegistrationFormProps> = ({
                 </select>
               </div>
 
-              <div className="space-y-1.5 md:col-span-2">
+              <div className="space-y-1 md:col-span-2">
                 <label className="text-sm font-semibold text-[#374151]">Address</label>
                 <input
                   type="text"
@@ -331,24 +335,24 @@ export const CSORegistrationForm: React.FC<CSORegistrationFormProps> = ({
                   value={formData.address}
                   onChange={handleChange}
                   placeholder="Barangay, municipality, La Union"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#4E8D42] focus:border-transparent transition-all shadow-sm"
+                  className={`w-full px-3.5 ${isModal ? 'py-2' : 'py-2.5'} rounded-xl border border-gray-200 bg-white text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#4E8D42] focus:border-transparent transition-all shadow-sm`}
                 />
               </div>
 
-              <div className="space-y-1.5 md:col-span-2">
+              <div className="space-y-1 md:col-span-2">
                 <label className="text-sm font-semibold text-[#374151]">Advocacy</label>
                 <textarea
                   name="advocacy"
-                  rows={3}
+                  rows={isModal ? 2 : 3}
                   value={formData.advocacy}
                   onChange={handleChange}
                   placeholder="Describe the organization's main advocacy and community work."
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#4E8D42] focus:border-transparent transition-all shadow-sm"
+                  className={`w-full px-3.5 ${isModal ? 'py-2' : 'py-2.5'} rounded-xl border border-gray-200 bg-white text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#4E8D42] focus:border-transparent transition-all shadow-sm`}
                 />
               </div>
 
-              <div className="md:col-span-2 pt-1">
-                <label className="inline-flex items-center gap-3 cursor-pointer p-3.5 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors w-full">
+              <div className="md:col-span-2">
+                <label className={`inline-flex items-center gap-3 cursor-pointer ${isModal ? 'p-2.5' : 'p-3.5'} rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors w-full`}>
                   <input
                     type="checkbox"
                     name="isWomenLed"
@@ -360,7 +364,7 @@ export const CSORegistrationForm: React.FC<CSORegistrationFormProps> = ({
                     <span className="text-sm font-semibold text-gray-900 block">
                       Check if CSO is led by WOMEN
                     </span>
-                    <span className="text-sm text-[#374151]">
+                    <span className="text-xs sm:text-sm text-[#374151]">
                       Check if the organization is led by a female president/director or primarily advances women development.
                     </span>
                   </div>
@@ -368,7 +372,7 @@ export const CSORegistrationForm: React.FC<CSORegistrationFormProps> = ({
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 pt-4">
+            <div className={`flex justify-end gap-3 ${isModal ? 'pt-2' : 'pt-4'}`}>
               <button
                 type="button"
                 onClick={onCancel}
@@ -379,7 +383,7 @@ export const CSORegistrationForm: React.FC<CSORegistrationFormProps> = ({
               <button
                 type="button"
                 onClick={handleNext}
-                className="min-h-10 px-6 py-2.5 rounded-xl bg-[#315f2b] hover:bg-[#244b20] text-white text-sm font-semibold shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#143C2C] transition-colors flex items-center gap-2"
+                className="min-h-10 px-6 py-2.5 rounded-xl bg-[#143C2C] hover:bg-[#1B4D39] text-white text-sm font-semibold shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#143C2C] transition-colors flex items-center gap-2"
               >
                 <span>Continue to Representative</span>
                 <ChevronRight size={16} />
@@ -392,11 +396,11 @@ export const CSORegistrationForm: React.FC<CSORegistrationFormProps> = ({
         {currentStep === 2 && (
           <div className={cardClass}>
             <div className="flex items-start gap-4 pb-4">
-              <div className="w-12 h-12 rounded-xl bg-[#EBF3E8] text-[#3A7530] flex items-center justify-center shrink-0">
+              <div className="w-12 h-12 rounded-xl bg-[#EEF5F0] text-[#143C2C] flex items-center justify-center shrink-0">
                 <UserCheck size={24} />
               </div>
               <div>
-                <span className="text-sm font-bold uppercase tracking-wider text-[#245b29] block">
+                <span className="text-sm font-bold uppercase tracking-wider text-[#143C2C] block">
                   SECTION 02
                 </span>
                 <h3 className="text-lg font-bold text-gray-900">Authorized representative</h3>
@@ -470,7 +474,7 @@ export const CSORegistrationForm: React.FC<CSORegistrationFormProps> = ({
               <button
                 type="button"
                 onClick={handleNext}
-                className="min-h-10 px-6 py-2.5 rounded-xl bg-[#315f2b] hover:bg-[#244b20] text-white text-sm font-semibold shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#143C2C] transition-colors flex items-center gap-2"
+                className="min-h-10 px-6 py-2.5 rounded-xl bg-[#143C2C] hover:bg-[#1B4D39] text-white text-sm font-semibold shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#143C2C] transition-colors flex items-center gap-2"
               >
                 <span>Continue to Accreditation</span>
                 <ChevronRight size={16} />
@@ -483,11 +487,11 @@ export const CSORegistrationForm: React.FC<CSORegistrationFormProps> = ({
         {currentStep === 3 && (
           <div className={cardClass}>
             <div className="flex items-start gap-4 pb-4">
-              <div className="w-12 h-12 rounded-xl bg-[#EBF3E8] text-[#3A7530] flex items-center justify-center shrink-0">
+              <div className="w-12 h-12 rounded-xl bg-[#EEF5F0] text-[#143C2C] flex items-center justify-center shrink-0">
                 <Award size={24} />
               </div>
               <div>
-                <span className="text-sm font-bold uppercase tracking-wider text-[#245b29] block">
+                <span className="text-sm font-bold uppercase tracking-wider text-[#143C2C] block">
                   SECTION 03
                 </span>
                 <h3 className="text-lg font-bold text-gray-900">Accreditation details</h3>
@@ -573,7 +577,7 @@ export const CSORegistrationForm: React.FC<CSORegistrationFormProps> = ({
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="min-h-10 px-7 py-2.5 rounded-xl bg-[#315f2b] hover:bg-[#244b20] text-white text-sm font-semibold shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#143C2C] transition-colors flex items-center gap-2 disabled:opacity-50"
+                className="min-h-9 px-5 py-2 rounded-xl bg-[#143C2C] hover:bg-[#1B4D39] text-white text-sm font-semibold shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#143C2C] transition-colors flex items-center gap-2 disabled:opacity-50"
               >
                 {isSubmitting ? (
                   <>

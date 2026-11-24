@@ -37,6 +37,7 @@ interface CSOTableProps {
   onEdit?: (record: CSORecord) => void;
   onAddAttachment?: (record: CSORecord, file: File) => Promise<void>;
   onRemoveAttachment?: (record: CSORecord) => Promise<void>;
+  variant?: 'full' | 'summary';
   showingArchived?: boolean;
   enablePagination?: boolean;
   defaultPageSize?: number;
@@ -55,6 +56,7 @@ export const CSOTable: React.FC<CSOTableProps> = ({
   onEdit,
   onAddAttachment,
   onRemoveAttachment,
+  variant = 'full',
   showingArchived = false,
   enablePagination = false,
   defaultPageSize = 10,
@@ -253,9 +255,11 @@ export const CSOTable: React.FC<CSOTableProps> = ({
   return (
     <>
       <div className="w-full min-w-0 rounded-2xl bg-[#F3F4F6] border border-[#E5E7EB] p-3 space-y-2.5">
-        <p className="hidden md:block text-xs font-medium text-[#4B5563] px-1">
-          Tip: Click any row to open full organization details, representative contacts, and attachments. Scroll right for resolution and date fields.
-        </p>
+        {variant === 'full' && (
+          <p className="hidden md:block text-xs font-medium text-[#4B5563] px-1">
+            Tip: Click any row to open full organization details, representative contacts, and attachments. Scroll right for resolution and date fields.
+          </p>
+        )}
         {/* Mobile card list */}
         <div className="md:hidden space-y-2.5">
           {displayedRecords.length === 0 ? (
@@ -302,7 +306,7 @@ export const CSOTable: React.FC<CSOTableProps> = ({
                   <button
                     type="button"
                     onClick={() => setSelectedRecord(record)}
-                    className="inline-flex min-h-10 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold text-[#245b29] bg-emerald-50 hover:bg-emerald-100"
+                    className="inline-flex min-h-10 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold text-[#143C2C] bg-[#EEF5F0] hover:bg-[#DFECE3]"
                   >
                     <Eye size={14} />
                     <span>Details</span>
@@ -311,7 +315,7 @@ export const CSOTable: React.FC<CSOTableProps> = ({
                     <button
                       type="button"
                       onClick={() => onEdit(record)}
-                      className="inline-flex min-h-10 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold text-[#374151] bg-gray-100 hover:bg-gray-200"
+                      className="inline-flex min-h-10 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold text-[#374151] bg-[#F3F4F6] hover:bg-gray-200"
                     >
                       <Pencil size={14} />
                       <span>Edit</span>
@@ -322,7 +326,7 @@ export const CSOTable: React.FC<CSOTableProps> = ({
                       type="button"
                       onClick={() => handleArchive(record)}
                       disabled={archivingRecordId !== null || deletingRecordId !== null}
-                      className="inline-flex min-h-10 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold text-amber-800 bg-amber-50 hover:bg-amber-100 disabled:opacity-60"
+                      className="inline-flex min-h-10 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold text-[#374151] bg-[#F3F4F6] hover:bg-gray-200 disabled:opacity-60"
                     >
                       {record.archived ? <ArchiveRestore size={14} /> : <Archive size={14} />}
                       <span>{record.archived ? 'Restore' : 'Archive'}</span>
@@ -360,66 +364,76 @@ export const CSOTable: React.FC<CSOTableProps> = ({
         >
           <table className="w-full min-w-max text-left border-collapse text-sm whitespace-nowrap">
             <thead className="sticky top-0 z-10">
-              <tr className="bg-[#27632A] text-white font-bold tracking-wide uppercase text-sm">
-                <th className="py-2.5 px-3 border-r border-white/20 text-center w-12">NO.</th>
-                <th aria-sort={getAriaSort('status')} className="py-2.5 px-4 border-r border-white/20">
+              <tr className="bg-[#143C2C] text-white font-semibold tracking-wide uppercase text-xs">
+                <th className="py-3 px-3 border-r border-white/15 text-center w-12">NO.</th>
+                <th aria-sort={getAriaSort('status')} className="py-3 px-4 border-r border-white/15">
                   <button
                     type="button"
                     onClick={() => handleSort('status')}
-                    className="inline-flex items-center gap-1.5 uppercase font-bold tracking-wide hover:text-emerald-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white rounded"
+                    className="inline-flex items-center gap-1.5 uppercase font-semibold tracking-wide hover:text-white/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white rounded"
                   >
                     <span>SP ACCREDITED</span>
                     {renderSortIcon('status')}
                   </button>
                 </th>
-                <th className="py-2.5 px-4 border-r border-white/20 min-w-[240px]">ADVOCACY</th>
-                <th className="py-2.5 px-3 border-r border-white/20">SECTOR</th>
+                {variant === 'full' && (
+                  <th className="py-3 px-4 border-r border-white/15 min-w-[240px]">ADVOCACY</th>
+                )}
+                <th className="py-3 px-3 border-r border-white/15">SECTOR</th>
                 <th
                   aria-sort={getAriaSort('organizationName')}
-                  className="sticky left-0 z-20 bg-[#27632A] py-2.5 px-4 border-r border-white/20 min-w-[220px] shadow-[6px_0_12px_-6px_rgba(0,0,0,0.2)]"
+                  className={`${variant === 'full' ? 'sticky left-0 z-20 bg-[#143C2C] shadow-[6px_0_12px_-6px_rgba(0,0,0,0.2)]' : ''} py-3 px-4 border-r border-white/15 min-w-[220px]`}
                 >
                   <button
                     type="button"
                     onClick={() => handleSort('organizationName')}
-                    className="inline-flex items-center gap-1.5 uppercase font-bold tracking-wide hover:text-emerald-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white rounded"
+                    className="inline-flex items-center gap-1.5 uppercase font-semibold tracking-wide hover:text-white/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white rounded"
                   >
                     <span>NAME OF ORGANIZATION</span>
                     {renderSortIcon('organizationName')}
                   </button>
                 </th>
-                <th className="py-2.5 px-4 border-r border-white/20">NAME OF REPRESENTATIVE</th>
-                <th className="py-2.5 px-3 border-r border-white/20">POSITION</th>
-                <th className="py-2.5 px-4 border-r border-white/20 min-w-[200px]">ADDRESS</th>
-                <th aria-sort={getAriaSort('lguRepresented')} className="py-2.5 px-3 border-r border-white/20">
+                {variant === 'full' && (
+                  <>
+                    <th className="py-3 px-4 border-r border-white/15">NAME OF REPRESENTATIVE</th>
+                    <th className="py-3 px-3 border-r border-white/15">POSITION</th>
+                    <th className="py-3 px-4 border-r border-white/15 min-w-[200px]">ADDRESS</th>
+                  </>
+                )}
+                <th aria-sort={getAriaSort('lguRepresented')} className="py-3 px-3 border-r border-white/15">
                   <button
                     type="button"
                     onClick={() => handleSort('lguRepresented')}
-                    className="inline-flex items-center gap-1.5 uppercase font-bold tracking-wide hover:text-emerald-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white rounded"
+                    className="inline-flex items-center gap-1.5 uppercase font-semibold tracking-wide hover:text-white/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white rounded"
                   >
                     <span>LGU REPRESENTED</span>
                     {renderSortIcon('lguRepresented')}
                   </button>
                 </th>
-                <th className="py-2.5 px-3 border-r border-white/20">CONTACT NUMBER</th>
-                <th className="py-2.5 px-4 border-r border-white/20">EMAIL ADDRESS</th>
-                <th className="py-2.5 px-3 border-r border-white/20 text-center">
-                  ACCREDITING AGENCY<br /><span className="text-sm font-normal">(SEC, CDA etc.)</span>
-                </th>
-                <th className="py-2.5 px-3 border-r border-white/20 text-center">
-                  CHECK IF CSO<br />IS LED WOMEN
-                </th>
-                <th className="py-2.5 px-3 border-r border-white/20">RESOLUTION NO.</th>
-                <th aria-sort={getAriaSort('dateAccredited')} className="py-2.5 px-3 border-r border-white/20">
+                {variant === 'full' && (
+                  <>
+                    <th className="py-3 px-3 border-r border-white/15">CONTACT NUMBER</th>
+                    <th className="py-3 px-4 border-r border-white/15">EMAIL ADDRESS</th>
+                    <th className="py-3 px-3 border-r border-white/15 text-center">
+                      ACCREDITING AGENCY<br /><span className="text-[11px] font-normal text-white/80">(SEC, CDA etc.)</span>
+                    </th>
+                    <th className="py-3 px-3 border-r border-white/15 text-center">
+                      CHECK IF CSO<br />IS LED WOMEN
+                    </th>
+                    <th className="py-3 px-3 border-r border-white/15">RESOLUTION NO.</th>
+                  </>
+                )}
+                <th aria-sort={getAriaSort('dateAccredited')} className="py-3 px-3 border-r border-white/15">
                   <button
                     type="button"
                     onClick={() => handleSort('dateAccredited')}
-                    className="inline-flex items-center gap-1.5 uppercase font-bold tracking-wide hover:text-emerald-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white rounded"
+                    className="inline-flex items-center gap-1.5 uppercase font-semibold tracking-wide hover:text-white/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white rounded"
                   >
                     <span>DATE ACCREDITED</span>
                     {renderSortIcon('dateAccredited')}
                   </button>
                 </th>
-                <th className="sticky right-0 z-20 bg-[#27632A] py-2.5 px-3 text-center min-w-[190px] shadow-[-6px_0_12px_-6px_rgba(0,0,0,0.2)]">
+                <th className={`${variant === 'full' ? 'sticky right-0 z-20 bg-[#143C2C] shadow-[-6px_0_12px_-6px_rgba(0,0,0,0.2)]' : ''} py-3 px-3 text-center`}>
                   ACTION
                 </th>
               </tr>
@@ -427,7 +441,7 @@ export const CSOTable: React.FC<CSOTableProps> = ({
             <tbody className="divide-y divide-gray-100 text-[#374151]">
               {displayedRecords.length === 0 ? (
                 <tr>
-                  <td colSpan={16} className="py-12 text-center text-[#374151]">
+                  <td colSpan={variant === 'full' ? 16 : 7} className="py-12 text-center text-[#374151]">
                     <p className="text-sm font-medium">
                       No {showingArchived ? 'archived ' : ''}CSO records found matching your filters.
                     </p>
@@ -445,87 +459,95 @@ export const CSOTable: React.FC<CSOTableProps> = ({
                         setSelectedRecord(record);
                       }
                     }}
-                    className="hover:bg-emerald-50/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-[#245b29] transition-colors group cursor-pointer"
+                    className="hover:bg-[#F3F6F4] focus-visible:outline focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-[#143C2C] transition-colors group cursor-pointer"
                   >
                     <td className="py-3 px-3 text-center font-medium text-[#374151] tabular-nums">
                       {record.no ?? startIndex + index + 1}
                     </td>
                     <td className="py-3 px-4">
-                      <StatusBadge status={record.status} className="min-h-10" />
+                      <StatusBadge status={record.status} />
                     </td>
-                    <td className="py-3 px-4 max-w-[260px] truncate font-normal text-[#374151]" title={record.advocacy}>
-                      {displayValue(record.advocacy)}
+                    {variant === 'full' && (
+                      <td className="py-3 px-4 max-w-[260px] truncate font-normal text-[#374151]" title={record.advocacy}>
+                        {displayValue(record.advocacy)}
+                      </td>
+                    )}
+                    <td className="py-3 px-3 text-sm text-[#374151]">
+                      {displayValue(record.sector)}
                     </td>
-                    <td className="py-3 px-3">
-                      <span className="inline-block px-3 py-1 rounded-md bg-gray-100 text-[#374151] font-medium text-sm">
-                        {displayValue(record.sector)}
-                      </span>
-                    </td>
-                    <td className="sticky left-0 z-10 bg-white group-hover:bg-emerald-50/95 py-3 px-4 font-semibold text-gray-900 group-hover:text-[#2E7D32] shadow-[6px_0_12px_-6px_rgba(0,0,0,0.08)] transition-colors">
+                    <td className={`${variant === 'full' ? 'sticky left-0 z-10 bg-white group-hover:bg-[#F3F6F4] shadow-[6px_0_12px_-6px_rgba(0,0,0,0.08)]' : ''} py-3 px-4 font-semibold text-[#111827] group-hover:text-[#143C2C] transition-colors`}>
                       {displayValue(record.organizationName)}
                     </td>
-                    <td className="py-3 px-4 text-gray-800 font-medium">
-                      {displayValue(record.representativeName)}
-                    </td>
-                    <td className="py-3 px-3 text-[#374151]">
-                      {displayValue(record.position)}
-                    </td>
-                    <td className="py-3 px-4 text-[#374151] max-w-[220px] truncate" title={displayValue(record.address)}>
-                      {displayValue(record.address)}
-                    </td>
+                    {variant === 'full' && (
+                      <>
+                        <td className="py-3 px-4 text-gray-800 font-medium">
+                          {displayValue(record.representativeName)}
+                        </td>
+                        <td className="py-3 px-3 text-[#374151]">
+                          {displayValue(record.position)}
+                        </td>
+                        <td className="py-3 px-4 text-[#374151] max-w-[220px] truncate" title={displayValue(record.address)}>
+                          {displayValue(record.address)}
+                        </td>
+                      </>
+                    )}
                     <td className="py-3 px-3 font-medium text-gray-800">
                       {displayValue(record.lguRepresented)}
                     </td>
-                    <td className="py-3 px-3 font-mono text-sm text-[#374151] tabular-nums">
-                      {displayValue(record.contactNumber)}
-                    </td>
-                    <td className="py-3 px-4 text-[#374151] truncate max-w-[180px]">
-                      {record.emailAddress ? (
-                        <a
-                          href={`mailto:${record.emailAddress}`}
-                          onClick={(e) => e.stopPropagation()}
-                          className="hover:underline hover:text-[#245b29] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#245b29]"
-                        >
-                          {record.emailAddress}
-                        </a>
-                      ) : (
-                        displayValue(record.emailAddress)
-                      )}
-                    </td>
-                    <td className="py-3 px-3 text-center font-semibold text-[#374151]">
-                      {displayValue(record.accreditingAgency)}
-                    </td>
-                    <td className="py-3 px-3 text-center">
-                      {record.isWomenLed ? (
-                        <span className="inline-flex min-h-10 items-center gap-1 px-3 rounded-full bg-[#E8F5E9] text-[#245b29] font-semibold text-sm">
-                          <Check size={12} strokeWidth={3} />
-                          Yes
-                        </span>
-                      ) : record.isWomenLed === false ? (
-                        <span className="text-[#374151] font-medium text-sm">No</span>
-                      ) : (
-                        <span className="text-gray-500 italic text-sm">{UNSPECIFIED_VALUE}</span>
-                      )}
-                    </td>
-                    <td className="py-3 px-3 font-mono text-sm text-[#374151] tabular-nums">
-                      {displayValue(record.resolutionNo)}
-                    </td>
+                    {variant === 'full' && (
+                      <>
+                        <td className="py-3 px-3 font-mono text-sm text-[#374151] tabular-nums">
+                          {displayValue(record.contactNumber)}
+                        </td>
+                        <td className="py-3 px-4 text-[#374151] truncate max-w-[180px]">
+                          {record.emailAddress ? (
+                            <a
+                              href={`mailto:${record.emailAddress}`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="hover:underline hover:text-[#143C2C] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#143C2C]"
+                            >
+                              {record.emailAddress}
+                            </a>
+                          ) : (
+                            displayValue(record.emailAddress)
+                          )}
+                        </td>
+                        <td className="py-3 px-3 text-center font-semibold text-[#374151]">
+                          {displayValue(record.accreditingAgency)}
+                        </td>
+                        <td className="py-3 px-3 text-center">
+                          {record.isWomenLed ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#EEF5F0] text-[#143C2C] font-semibold text-xs">
+                              <Check size={12} strokeWidth={3} />
+                              Yes
+                            </span>
+                          ) : record.isWomenLed === false ? (
+                            <span className="text-[#374151] font-medium text-sm">No</span>
+                          ) : (
+                            <span className="text-gray-500 italic text-sm">{UNSPECIFIED_VALUE}</span>
+                          )}
+                        </td>
+                        <td className="py-3 px-3 font-mono text-sm text-[#374151] tabular-nums">
+                          {displayValue(record.resolutionNo)}
+                        </td>
+                      </>
+                    )}
                     <td className="py-3 px-3 text-[#374151] font-mono text-sm tabular-nums">
                       {displayValue(record.dateAccredited)}
                     </td>
                     <td
-                      className="sticky right-0 z-10 bg-white group-hover:bg-emerald-50/95 py-3 px-3 text-center shadow-[-6px_0_12px_-6px_rgba(0,0,0,0.08)] transition-colors"
+                      className={`${variant === 'full' ? 'sticky right-0 z-10 bg-white group-hover:bg-[#F3F6F4] shadow-[-6px_0_12px_-6px_rgba(0,0,0,0.08)]' : ''} py-3 px-3 text-center transition-colors`}
                       onClick={(e) => e.stopPropagation()}
                     >
                       <div className="flex items-center justify-start gap-1">
                         <button
                           type="button"
                           onClick={() => setSelectedRecord(record)}
-                          className="inline-flex min-h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-2 text-[#374151] hover:text-emerald-800 hover:bg-emerald-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#245b29] transition-colors"
+                          className="inline-flex min-h-9 shrink-0 items-center gap-1 whitespace-nowrap rounded-lg px-2 text-xs font-medium text-[#374151] hover:text-[#111827] hover:bg-[#E5E7EB]/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#143C2C] transition-colors"
                           title="View Details"
                         >
-                          <Eye size={15} />
-                          <span>View details</span>
+                          <Eye size={14} />
+                          <span>View</span>
                         </button>
                         {isAdmin && (
                           <>
@@ -533,10 +555,10 @@ export const CSOTable: React.FC<CSOTableProps> = ({
                               <button
                                 type="button"
                                 onClick={() => onEdit(record)}
-                                className="inline-flex min-h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-2 text-[#374151] hover:text-blue-800 hover:bg-blue-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#245b29] transition-colors"
+                                className="inline-flex min-h-9 shrink-0 items-center gap-1 whitespace-nowrap rounded-lg px-2 text-xs font-medium text-[#374151] hover:text-[#111827] hover:bg-[#E5E7EB]/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#143C2C] transition-colors"
                                 title={`Edit ${record.organizationName}`}
                               >
-                                <Pencil size={15} />
+                                <Pencil size={14} />
                                 <span>Edit</span>
                               </button>
                             )}
@@ -544,13 +566,13 @@ export const CSOTable: React.FC<CSOTableProps> = ({
                               type="button"
                               onClick={() => handleArchive(record)}
                               disabled={archivingRecordId !== null || deletingRecordId !== null}
-                              className="inline-flex min-h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-2 text-[#374151] hover:text-amber-800 hover:bg-amber-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#245b29] disabled:cursor-wait disabled:opacity-60 transition-colors"
+                              className="inline-flex min-h-9 shrink-0 items-center gap-1 whitespace-nowrap rounded-lg px-2 text-xs font-medium text-[#374151] hover:text-[#111827] hover:bg-[#E5E7EB]/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#143C2C] disabled:cursor-wait disabled:opacity-60 transition-colors"
                               title={record.archived ? 'Restore from archive' : 'Archive record'}
                             >
-                              {record.archived ? <ArchiveRestore size={15} /> : <Archive size={15} />}
+                              {record.archived ? <ArchiveRestore size={14} /> : <Archive size={14} />}
                               <span>
                                 {archivingRecordId === record.id
-                                  ? 'Updating...'
+                                  ? 'Saving...'
                                   : record.archived
                                     ? 'Restore'
                                     : 'Archive'}
@@ -561,10 +583,10 @@ export const CSOTable: React.FC<CSOTableProps> = ({
                                 type="button"
                                 onClick={() => setPendingDeleteRecord(record)}
                                 disabled={deletingRecordId !== null || archivingRecordId !== null}
-                                className="inline-flex min-h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-2 text-red-700 hover:bg-red-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700 disabled:cursor-wait disabled:opacity-60 transition-colors"
+                                className="inline-flex min-h-9 shrink-0 items-center gap-1 whitespace-nowrap rounded-lg px-2 text-xs font-medium text-red-700 hover:bg-red-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700 disabled:cursor-wait disabled:opacity-60 transition-colors"
                                 title={`Permanently delete ${record.organizationName}`}
                               >
-                                <Trash2 size={15} />
+                                <Trash2 size={14} />
                                 <span>{deletingRecordId === record.id ? 'Deleting...' : 'Delete'}</span>
                               </button>
                             )}
@@ -575,11 +597,11 @@ export const CSOTable: React.FC<CSOTableProps> = ({
                                 disabled={uploadingAttachmentRecordId !== null}
                                 title="Add attachment"
                                 aria-label="Add attachment"
-                                className="inline-flex min-h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-2 text-[#374151] hover:text-emerald-800 hover:bg-emerald-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#245b29] disabled:cursor-wait disabled:opacity-60 transition-colors"
+                                className="inline-flex min-h-9 shrink-0 items-center gap-1 whitespace-nowrap rounded-lg px-2 text-xs font-medium text-[#374151] hover:text-[#111827] hover:bg-[#E5E7EB]/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#143C2C] disabled:cursor-wait disabled:opacity-60 transition-colors"
                               >
-                                <Paperclip size={15} />
+                                <Paperclip size={14} />
                                 <span>
-                                  {uploadingAttachmentRecordId === record.id ? 'Uploading...' : 'Add attachment'}
+                                  {uploadingAttachmentRecordId === record.id ? 'Uploading...' : 'Attach'}
                                 </span>
                               </button>
                             )}
@@ -593,11 +615,11 @@ export const CSOTable: React.FC<CSOTableProps> = ({
                                 disabled={removingAttachmentRecordId !== null}
                                 title="Remove attachment"
                                 aria-label="Remove attachment"
-                                className="inline-flex min-h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-2 text-red-700 hover:bg-red-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700 disabled:cursor-wait disabled:opacity-60 transition-colors"
+                                className="inline-flex min-h-9 shrink-0 items-center gap-1 whitespace-nowrap rounded-lg px-2 text-xs font-medium text-red-700 hover:bg-red-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700 disabled:cursor-wait disabled:opacity-60 transition-colors"
                               >
-                                <Trash2 size={15} />
+                                <Trash2 size={14} />
                                 <span>
-                                  {removingAttachmentRecordId === record.id ? 'Removing...' : 'Remove attachment'}
+                                  {removingAttachmentRecordId === record.id ? 'Removing...' : 'Remove'}
                                 </span>
                               </button>
                             )}
@@ -608,11 +630,11 @@ export const CSOTable: React.FC<CSOTableProps> = ({
                             type="button"
                             onClick={() => handleViewAttachment(record)}
                             disabled={openingAttachmentRecordId !== null}
-                            className="inline-flex min-h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-2 text-[#374151] hover:text-emerald-800 hover:bg-emerald-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#245b29] disabled:cursor-wait disabled:opacity-60 transition-colors"
+                            className="inline-flex min-h-9 shrink-0 items-center gap-1 whitespace-nowrap rounded-lg px-2 text-xs font-medium text-[#374151] hover:text-[#111827] hover:bg-[#E5E7EB]/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#143C2C] disabled:cursor-wait disabled:opacity-60 transition-colors"
                             title={`View attachment: ${record.certificateAttachment.name}`}
                           >
-                            <Paperclip size={15} />
-                            <span>{openingAttachmentRecordId === record.id ? 'Opening...' : 'View attachment'}</span>
+                            <Paperclip size={14} />
+                            <span>{openingAttachmentRecordId === record.id ? 'Opening...' : 'File'}</span>
                           </button>
                         )}
                         {attachmentError?.recordId === record.id && (
