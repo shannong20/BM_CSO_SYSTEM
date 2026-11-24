@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/client/context/AuthContext';
 import { Sidebar } from '@/client/components/Sidebar';
+import { DashboardSkeleton, TableSkeleton } from '@/client/components/Skeletons';
 
 const SIDEBAR_COLLAPSE_KEY = 'csotrack_sidebar_collapsed';
 
@@ -55,21 +56,39 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     }
   }, [isAdmin, isAuthenticated, loading, pathname, router]);
 
-  if (loading) {
-    return (
-      <div className="flex min-h-screen flex-1 items-center justify-center">
-        <p role="status" className="inline-flex items-center gap-3 text-sm font-medium text-[#245b29]">
-          <span className="h-5 w-5 animate-spin rounded-full border-2 border-[#245b29]/20 border-t-[#245b29]" />
-          Loading CSOTrack...
-        </p>
+  const renderAppSkeleton = (useTable = false) => (
+    <>
+      <Sidebar
+        collapsed={sidebarCollapsed}
+        onToggleCollapse={handleToggleSidebar}
+      />
+      <div
+        className={`flex min-w-0 flex-1 flex-col pt-14 lg:pt-0 min-h-screen overflow-hidden transition-[padding] duration-300 ease-in-out ${
+          sidebarCollapsed ? 'lg:pl-20' : 'lg:pl-64'
+        }`}
+      >
+        <main className="w-full flex-1 p-4 sm:p-5 lg:p-6 min-w-0">
+          {useTable ? <TableSkeleton rows={8} /> : <DashboardSkeleton />}
+        </main>
       </div>
-    );
+    </>
+  );
+
+  if (loading) {
+    if (pathname === '/login') {
+      return <main className="min-h-screen w-full">{children}</main>;
+    }
+    return renderAppSkeleton(pathname.startsWith('/directory'));
   }
   if (pathname === '/login') {
-    return isAuthenticated ? null : <main className="min-h-screen w-full">{children}</main>;
+    return isAuthenticated ? renderAppSkeleton(!isAdmin) : <main className="min-h-screen w-full">{children}</main>;
   }
-  if (!isAuthenticated) return null;
-  if (!isAdmin && (pathname === '/' || pathname.startsWith('/register'))) return null;
+  if (!isAuthenticated) {
+    return <div className="min-h-screen w-full bg-[#143C2C]" />;
+  }
+  if (!isAdmin && (pathname === '/' || pathname.startsWith('/register'))) {
+    return renderAppSkeleton(true);
+  }
 
   return (
     <>
