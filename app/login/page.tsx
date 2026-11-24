@@ -126,7 +126,7 @@ export default function LoginPage() {
                   value={username}
                   onChange={(event) => setUsername(event.target.value)}
                   placeholder="admin@launion.gov.ph"
-                  className="min-h-11 w-full rounded-xl px-3.5 text-base text-white bg-white/10 border border-white/25 placeholder:text-white/45 outline-none transition-all focus:border-white/60 focus:ring-2 focus:ring-white/20"
+                  className="glass-input min-h-11 w-full rounded-xl px-3.5 text-base text-white bg-white/10 border border-white/25 placeholder:text-white/45 outline-none transition-all focus:border-white/60 focus:ring-2 focus:ring-white/20"
                 />
               </div>
 
@@ -147,7 +147,7 @@ export default function LoginPage() {
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
                     placeholder="Enter password"
-                    className="min-h-11 w-full rounded-xl px-3.5 pr-11 text-base text-white bg-white/10 border border-white/25 placeholder:text-white/45 outline-none transition-all focus:border-white/60 focus:ring-2 focus:ring-white/20"
+                    className="glass-input min-h-11 w-full rounded-xl px-3.5 pr-11 text-base text-white bg-white/10 border border-white/25 placeholder:text-white/45 outline-none transition-all focus:border-white/60 focus:ring-2 focus:ring-white/20"
                   />
                   <button
                     type="button"
