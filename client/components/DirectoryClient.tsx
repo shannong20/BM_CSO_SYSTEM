@@ -19,6 +19,7 @@ import { CSORecord } from '@/client/types';
 import {
   fetchArchiveCSORecord,
   fetchDeleteCSORecord,
+  fetchRemoveCertificateAttachment,
   fetchUploadCertificateAttachment,
 } from '@/client/lib/api';
 import { CSOTable } from '@/client/components/CSOTable';
@@ -169,6 +170,12 @@ export const DirectoryClient: React.FC<DirectoryClientProps> = ({
     setStatusMessage(`Uploaded attachment "${file.name}" for "${record.organizationName}".`);
   };
 
+  const handleRemoveAttachment = async (record: CSORecord) => {
+    const updatedRecord = await fetchRemoveCertificateAttachment(record.id);
+    handleRecordUpdate(updatedRecord);
+    setStatusMessage(`Removed attachment from "${record.organizationName}".`);
+  };
+
   const handleResetFilters = () => {
     setSearchQuery('');
     setDebouncedQuery('');
@@ -207,7 +214,7 @@ export const DirectoryClient: React.FC<DirectoryClientProps> = ({
 
     const rows = rowsToExport.map((r, idx) => [
       idx + 1,
-      escapeCSV(r.status === 'Unknown' ? 'NOT SPECIFIED, INPUT VALUE' : r.status),
+      escapeCSV(r.status),
       escapeCSV(r.advocacy ?? ''),
       escapeCSV(r.sector ?? ''),
       escapeCSV(r.organizationName),
@@ -237,11 +244,10 @@ export const DirectoryClient: React.FC<DirectoryClientProps> = ({
   };
 
   const statusCounts = useMemo(() => {
-    const counts = { all: recordsInCurrentView.length, Accredited: 0, Pending: 0, Expired: 0 };
+    const counts = { all: recordsInCurrentView.length, Accredited: 0, Pending: 0 };
     recordsInCurrentView.forEach((r) => {
       if (r.status === 'Accredited') counts.Accredited += 1;
       else if (r.status === 'Pending') counts.Pending += 1;
-      else if (r.status === 'Expired') counts.Expired += 1;
     });
     return counts;
   }, [recordsInCurrentView]);
@@ -317,7 +323,6 @@ export const DirectoryClient: React.FC<DirectoryClientProps> = ({
           { value: '', label: 'All Records', count: statusCounts.all },
           { value: 'Accredited', label: 'Accredited', count: statusCounts.Accredited },
           { value: 'Pending', label: 'Pending Review', count: statusCounts.Pending },
-          { value: 'Expired', label: 'Expired', count: statusCounts.Expired },
         ].map((tab) => {
           const active = selectedStatus === tab.value;
           return (
@@ -484,6 +489,7 @@ export const DirectoryClient: React.FC<DirectoryClientProps> = ({
           setIsModalOpen(true);
         }}
         onAddAttachment={handleAddAttachment}
+        onRemoveAttachment={handleRemoveAttachment}
         showingArchived={showArchived}
         enablePagination
         defaultPageSize={8}

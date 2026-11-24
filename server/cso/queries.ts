@@ -16,6 +16,7 @@ import {
   getDoc,
   setDoc,
   deleteDoc,
+  deleteField,
   Timestamp,
 } from 'firebase/firestore';
 import { deleteFromCloudinary } from '@/server/cloudinary';
@@ -30,9 +31,7 @@ function mapDocToRecord(id: string, data: Record<string, any>, index: number): C
   const rawStatus = String(data.status || data.spAccredited || '').trim().toUpperCase();
   const status: CSORecord['status'] =
     rawStatus === 'ACCREDITED' ? 'Accredited'
-      : rawStatus === 'PENDING' ? 'Pending'
-        : rawStatus === 'EXPIRED' ? 'Expired'
-          : 'Unknown';
+      : 'Pending';
 
   const womenLedValue = data.isWomenLed ?? data.womenLed;
   const normalizedWomenLed =
@@ -309,4 +308,33 @@ export async function saveFirestoreCertificateAttachment(
   await setDoc(recordRef, { certificateAttachment: attachment }, { merge: true });
 
   return { ...record, certificateAttachment: attachment };
+}
+
+/**
+ * Remove a certificate attachment from Cloudinary and its CSO record.
+ */
+export async function removeFirestoreCertificateAttachment(
+  record: CSORecord
+): Promise<CSORecord> {
+  if (!isFirebaseConfigured || !db) {
+    throw new Error('Firebase is not configured on the server.');
+  }
+
+  const manualRecordRef = doc(db, COLLECTION_MANUAL, record.id);
+  const manualSnapshot = await getDoc(manualRecordRef);
+  const recordRef = manualSnapshot.exists() ? manualRecordRef : doc(db, COLLECTION_SEEDED, record.id);
+  const snapshot = manualSnapshot.exists() ? manualSnapshot : await getDoc(recordRef);
+
+  if (!snapshot.exists()) {
+    throw new Error('This CSO record could not be found in the database.');
+  }
+
+  const attachment = snapshot.data().certificateAttachment as CertificateAttachment | undefined;
+  if (attachment?.storagePath) {
+    await deleteFromCloudinary(attachment.storagePath, attachment.resourceType);
+  }
+
+  await setDoc(recordRef, { certificateAttachment: deleteField() }, { merge: true });
+
+  return { ...record, certificateAttachment: undefined };
 }

@@ -9,6 +9,7 @@ import {
 import {
   getFirestoreCSORecordById,
   getFirestoreCertificateAttachmentUrl,
+  removeFirestoreCertificateAttachment,
   saveFirestoreCertificateAttachment,
 } from '@/server/cso/queries';
 import type { CertificateAttachment } from '@/shared/types';
@@ -119,6 +120,42 @@ export async function POST(
       {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to process attachment.',
+      },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(
+  request: Request,
+  context: { params: { id: string } }
+) {
+  const unauthorized = requireAdminSession(request);
+  if (unauthorized) return unauthorized;
+
+  try {
+    const record = await getFirestoreCSORecordById(context.params.id);
+    if (!record) {
+      return NextResponse.json(
+        { success: false, error: 'CSO record not found.' },
+        { status: 404 }
+      );
+    }
+
+    if (record.certificateAttachment?.storagePath && !isCloudinaryConfigured) {
+      return NextResponse.json(
+        { success: false, error: 'Cloudinary is not configured on the server.' },
+        { status: 503 }
+      );
+    }
+
+    const updatedRecord = await removeFirestoreCertificateAttachment(record);
+    return NextResponse.json({ success: true, data: updatedRecord });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to remove attachment.',
       },
       { status: 500 }
     );

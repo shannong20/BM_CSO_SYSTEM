@@ -10,7 +10,7 @@ export interface ValidationError {
   message: string;
 }
 
-const VALID_STATUSES: AccreditationStatus[] = ['Accredited', 'Pending', 'Expired', 'Unknown'];
+const VALID_STATUSES: AccreditationStatus[] = ['Accredited', 'Pending'];
 
 function readOptionalString(
   d: Record<string, unknown>,

@@ -21,7 +21,7 @@ A modern, responsive web application for managing and displaying the official Ci
   - **Women-led CSOs** (Count & percentage).
 - **Interactive Analytics:**
   - **Sector Distribution:** Dynamic bar chart representing counts across sectors (Fisherfolks, Farmers, Youth, Women, Persons with Disabilities, Transport, etc.).
-  - **Accreditation Status:** Breakdown of Accredited, Pending, and Expired resolutions.
+  - **Accreditation Status:** Breakdown of Accredited and Pending organizations.
 - **Latest Registry Entries:** Preview table with quick view drawers.
 
 ### 3. CSO Directory (`/directory`)
@@ -30,7 +30,7 @@ A modern, responsive web application for managing and displaying the official Ci
   - Real-time text search across organization name, advocacy, representative, address, and resolution number.
   - Dropdown filters for **All LGUs** (19 Municipalities + City of San Fernando).
   - Dropdown filters for **All Sectors**.
-  - Dropdown filters for **All Statuses** (Accredited, Pending, Expired).
+  - Dropdown filters for **All Statuses** (Accredited, Pending).
 - **Official 15-Column Data Table:**
   - `NO.`
   - `SP ACCREDITED` (Status badge)

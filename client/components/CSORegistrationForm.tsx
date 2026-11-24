@@ -534,8 +534,6 @@ export const CSORegistrationForm: React.FC<CSORegistrationFormProps> = ({
                 >
                   <option value="Accredited">Accredited</option>
                   <option value="Pending">Pending</option>
-                  <option value="Expired">Expired</option>
-                  <option value="Unknown">Not specified</option>
                 </select>
               </div>
 

@@ -11,6 +11,7 @@ import {
   Calendar,
   Paperclip,
   Pencil,
+  Trash2,
 } from 'lucide-react';
 import { CSORecord, UNSPECIFIED_VALUE, valueOrUnspecified } from '@/client/types';
 import { StatusBadge } from '@/client/components/StatusBadge';
@@ -23,10 +24,13 @@ interface RecordDetailsModalProps {
   onEdit?: (record: CSORecord) => void;
   onViewAttachment: (record: CSORecord) => void;
   onAddAttachmentClick?: (record: CSORecord) => void;
+  onRemoveAttachmentClick?: (record: CSORecord) => void;
   openingAttachmentRecordId: string | null;
   uploadingAttachmentRecordId: string | null;
+  removingAttachmentRecordId: string | null;
   attachmentError: { recordId: string; message: string } | null;
   attachmentUploadError: { recordId: string; message: string } | null;
+  attachmentRemoveError: { recordId: string; message: string } | null;
 }
 
 function displayValue(value: string | null | undefined): string {
@@ -40,10 +44,13 @@ export const RecordDetailsModal: React.FC<RecordDetailsModalProps> = ({
   onEdit,
   onViewAttachment,
   onAddAttachmentClick,
+  onRemoveAttachmentClick,
   openingAttachmentRecordId,
   uploadingAttachmentRecordId,
+  removingAttachmentRecordId,
   attachmentError,
   attachmentUploadError,
+  attachmentRemoveError,
 }) => {
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -82,11 +89,7 @@ export const RecordDetailsModal: React.FC<RecordDetailsModalProps> = ({
         </button>
 
         <div className="flex flex-wrap items-center gap-2 mb-1.5 pr-10">
-          {record.status === 'Unknown' ? (
-            <span className="text-sm text-gray-500">{UNSPECIFIED_VALUE}</span>
-          ) : (
-            <StatusBadge status={record.status} />
-          )}
+          <StatusBadge status={record.status} />
           {(record.isWomenLed === true || record.isWomenLed === false) && (
             <span
               className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full font-semibold text-sm ${
@@ -190,6 +193,17 @@ export const RecordDetailsModal: React.FC<RecordDetailsModalProps> = ({
                         : 'Add attachment'}
                   </button>
                 )}
+                {isAdmin && record.certificateAttachment && onRemoveAttachmentClick && (
+                  <button
+                    type="button"
+                    onClick={() => onRemoveAttachmentClick(record)}
+                    disabled={removingAttachmentRecordId !== null}
+                    className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 text-sm font-semibold text-red-700 hover:bg-red-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700 disabled:opacity-60"
+                  >
+                    <Trash2 size={14} />
+                    {removingAttachmentRecordId === record.id ? 'Removing...' : 'Remove'}
+                  </button>
+                )}
               </div>
             </div>
             {attachmentError?.recordId === record.id && (
@@ -200,6 +214,11 @@ export const RecordDetailsModal: React.FC<RecordDetailsModalProps> = ({
             {attachmentUploadError?.recordId === record.id && (
               <p className="text-xs text-red-700" role="alert">
                 {attachmentUploadError.message}
+              </p>
+            )}
+            {attachmentRemoveError?.recordId === record.id && (
+              <p className="text-xs text-red-700" role="alert">
+                {attachmentRemoveError.message}
               </p>
             )}
           </div>

@@ -31,17 +31,6 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, className = ''
     );
   }
 
-  if (normStatus === 'expired') {
-    return (
-      <span
-        className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-[#FFEBEE] text-[#B42318] ${className}`}
-      >
-        <span className="w-1.5 h-1.5 rounded-full bg-[#C62828] mr-1.5"></span>
-        Expired
-      </span>
-    );
-  }
-
   return (
     <span
       className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-gray-100 text-gray-700 ${className}`}

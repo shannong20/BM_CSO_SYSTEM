@@ -29,7 +29,6 @@ export const SectorChart: React.FC<SectorChartProps> = ({ records }) => {
   // Status breakdown
   const accreditedCount = records.filter((r) => r.status === 'Accredited').length;
   const pendingCount = records.filter((r) => r.status === 'Pending').length;
-  const expiredCount = records.filter((r) => r.status === 'Expired').length;
   const total = records.length || 1;
 
   return (
@@ -100,7 +99,7 @@ export const SectorChart: React.FC<SectorChartProps> = ({ records }) => {
       <div className="bg-white rounded-2xl p-6 border border-[#E5E7EB] shadow-sm flex flex-col justify-between">
         <div>
           <h2 className="text-base font-bold text-[#111827] tracking-tight mb-1">Accreditation Status</h2>
-          <p className="text-sm text-[#374151] mb-6">Current validity breakdown (Term 2025–2028)</p>
+          <p className="text-sm text-[#374151] mb-6">Accredited and pending organizations (Term 2025–2028)</p>
 
           <div className="space-y-4">
             {/* Accredited */}
@@ -143,25 +142,6 @@ export const SectorChart: React.FC<SectorChartProps> = ({ records }) => {
               </div>
             </Link>
 
-            {/* Expired */}
-            <Link
-              href="/directory?status=Expired"
-              className="min-h-16 p-4 rounded-xl bg-[#FEF2F2] hover:bg-red-100/70 active:scale-[0.99] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#B42318] transition-all flex items-center justify-between"
-            >
-              <div className="flex items-center gap-3">
-                <span className="w-3 h-3 rounded-full bg-[#B42318]"></span>
-                <div>
-                  <h3 className="text-sm font-bold text-gray-900">Expired</h3>
-                  <p className="text-sm text-[#B42318] font-medium">Requires renewal</p>
-                </div>
-              </div>
-              <div className="text-right tabular-nums">
-                <span className="text-base font-bold text-[#B42318]">{expiredCount}</span>
-                <span className="text-sm text-[#374151] block">
-                  {Math.round((expiredCount / total) * 100)}%
-                </span>
-              </div>
-            </Link>
           </div>
         </div>
 

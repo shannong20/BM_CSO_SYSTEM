@@ -1,4 +1,4 @@
-export type AccreditationStatus = 'Accredited' | 'Pending' | 'Expired' | 'Unknown';
+export type AccreditationStatus = 'Accredited' | 'Pending';
 
 export interface CertificateAttachment {
   name: string;
