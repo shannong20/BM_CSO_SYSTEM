@@ -171,7 +171,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     <span
                       className={`${
                         collapsed ? 'lg:hidden' : ''
-                      } inline-flex min-h-10 items-center text-sm uppercase font-semibold px-3 rounded-full bg-[#1F4A39] text-[#E1F0E8]`}
+                      } inline-flex items-center text-xs uppercase font-semibold px-2 py-0.5 rounded-full bg-[#1F4A39] text-[#E1F0E8]`}
                     >
                       Soon
                     </span>
@@ -313,7 +313,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <button
                 type="button"
                 onClick={() => setIsHelpOpen(false)}
-                className="min-h-10 rounded-xl bg-[#27632A] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1f5022] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#245b29]"
+                className="min-h-10 rounded-xl bg-[#143C2C] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1B4D39] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#143C2C]"
               >
                 Got it
               </button>

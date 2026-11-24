@@ -37,12 +37,10 @@ export const MetricCard: React.FC<MetricCardProps> = ({
           </p>
           {badgeText && (
             <span
-              className={`inline-flex min-h-7 items-center text-xs font-semibold px-2.5 rounded-full tabular-nums ${
+              className={`inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded-full tabular-nums ${
                 badgeType === 'success'
-                  ? 'bg-[#E8F5E9] text-[#2E7D32]'
-                  : badgeType === 'warning'
-                  ? 'bg-[#FFF3E0] text-[#8A3D00]'
-                  : 'bg-blue-50 text-blue-700'
+                  ? 'bg-[#EEF5F0] text-[#143C2C]'
+                  : 'bg-[#F3F4F6] text-[#374151]'
               }`}
             >
               {badgeText}
